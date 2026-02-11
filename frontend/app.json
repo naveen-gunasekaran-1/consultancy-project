@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "VJN Billing",
+    "slug": "vjn-billing-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.vjnbilling.app"
+    }
+  }
+}
