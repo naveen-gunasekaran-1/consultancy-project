@@ -27,6 +27,19 @@ cp .env.example .env
 npm run dev
 ```
 
+## Seed Admin User
+
+Create the default admin account for first login:
+
+```bash
+npm run ts-node src/scripts/seedAdmin.ts
+```
+
+Default credentials:
+
+- Email: admin@vjn.com
+- Password: admin123
+
 5. Build for production:
 ```bash
 npm run build

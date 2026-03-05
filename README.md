@@ -21,7 +21,18 @@ A complete scaffold/framework for a standalone billing and inventory management 
 
 ---
 
-## 📁 Project Structure
+## � Documentation
+
+This project includes comprehensive documentation to help developers get started and understand what features are complete and what remains to be built:
+
+- **[Quick Start Guide](QUICK_START.md)** - Get up and running in 5 minutes with setup instructions, common issues, and development workflow
+- **[Development Roadmap](DEVELOPMENT_ROADMAP.md)** - Detailed breakdown of all incomplete features with implementation guides, code examples, and priority phases- **[Teammate Tasks](TEAMMATE_TASKS.md)** - 2 ready-to-implement feature tasks (4-12 hours each) with complete code examples
+- **[Simple Frontend Tasks](SIMPLE_FRONTEND_TASKS.md)** - 5 quick frontend improvements (1-3 hours each) perfect for beginners
+**Project Completion Status**: ~30% (Structure complete, business logic requires implementation)
+
+---
+
+## �📁 Project Structure
 
 ```
 VJN WAY TO SUCCESS/
@@ -96,6 +107,8 @@ VJN WAY TO SUCCESS/
 ---
 
 ## 🚀 Quick Start
+
+> **💡 New to this project? Start with the [Quick Start Guide](QUICK_START.md) for detailed setup instructions, common issues, and troubleshooting tips.**
 
 ### Backend Setup
 
@@ -314,25 +327,36 @@ Authorization: Bearer <token>
 
 ## 🚧 TODO - Production Readiness
 
-### Critical
-1. Implement real authentication logic
-2. Add comprehensive input validation
-3. Implement proper error handling
-4. Add unit and integration tests
-5. Set up CI/CD pipeline
-6. Configure production database
-7. Add monitoring and logging
-8. Implement backup strategy
+> **📋 For detailed implementation guides with code examples, see [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)**
 
-### Enhancements
-1. Add real AI/ML integration
-2. Implement PDF invoice generation
-3. Add email notifications
-4. Implement search functionality
-5. Add data export (Excel/PDF)
-6. Implement multi-user support
-7. Add audit logs
-8. Create admin dashboard
+### Critical (Phase 1 MVP - 4-6 weeks)
+1. ✅ Implement real authentication logic (password hashing, JWT verification)
+2. Add comprehensive input validation with Joi
+3. Implement proper error handling across all endpoints
+4. Complete Add/Edit screens for all CRUD operations
+5. Implement stock deduction on invoice creation
+6. Replace mock report data with real database aggregations
+7. Add form validation to all frontend screens
+
+### Enhancements (Phase 2 - 4-6 weeks)
+1. Implement PDF invoice generation
+2. Add email notifications for invoices
+3. Implement search and filter functionality
+4. Add pagination for all list views
+5. Implement data export (Excel/PDF)
+6. Add comprehensive error states and loading indicators
+7. Create detailed audit logs
+
+### Advanced (Phase 3 - 4-8 weeks)
+1. Add real AI/ML integration (replace mock data)
+2. Implement role-based access control (RBAC)
+3. Set up CI/CD pipeline
+4. Add unit and integration tests
+5. Implement backup strategy
+6. Add monitoring and logging (Winston, Morgan)
+7. Configure production database with replicas
+
+See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) for complete task breakdown with checkboxes, dependencies, and code examples.
 
 ---
 
@@ -373,21 +397,34 @@ This is a scaffold/framework project for educational purposes.
 
 ## 🤝 Contributing
 
-This is a basic scaffold. To extend:
-1. Implement TODO comments in controllers
-2. Add validation to all endpoints
-3. Create edit/add screens in frontend
-4. Integrate real AI/ML services
-5. Add comprehensive testing
+This is a basic scaffold with ~30% completion. To extend and complete the system:
+
+1. **Start Here**: Read the [Quick Start Guide](QUICK_START.md) for setup and development workflow
+2. **Pick Tasks Based on Experience**:
+   - **Beginners**: Start with [Simple Frontend Tasks](SIMPLE_FRONTEND_TASKS.md) (1-3 hours each)
+   - **Intermediate**: Try [Teammate Tasks](TEAMMATE_TASKS.md) (4-12 hours, complete features)
+   - **Advanced**: Review [Development Roadmap](DEVELOPMENT_ROADMAP.md) for full feature implementation
+3. **Priority Areas**:
+   - Implement TODO comments in controllers
+   - Add validation to all endpoints
+   - Create Add/Edit screens in frontend
+   - Replace mock data with real database queries
+   - Implement form validation across all screens
+4. **Testing**: Add unit tests for models, integration tests for APIs
+5. **AI Integration**: Replace mock AI responses with real ML models
+
+See task documents above for detailed implementation guides with code examples.
 
 ---
 
 ## 📞 Support
 
 For development questions:
-- Check individual README files in `backend/` and `frontend/`
-- Review TODO comments in code
-- Refer to API documentation above
+- **Setup Issues**: Check [Quick Start Guide](QUICK_START.md) → Common Issues section
+- **Simple Tasks**: Start with [Simple Frontend Tasks](SIMPLE_FRONTEND_TASKS.md) for quick wins
+- **Feature Implementation**: Refer to [Teammate Tasks](TEAMMATE_TASKS.md) or [Development Roadmap](DEVELOPMENT_ROADMAP.md)
+- **Code Structure**: Check individual README files in `backend/` and `frontend/`
+- **API Usage**: Review API documentation section above
 
 ---
 

@@ -7,6 +7,7 @@ import {
   deleteGuide,
   searchGuides,
 } from '../controllers/guideController';
+import { adminMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -34,22 +35,22 @@ router.get('/:id', getGuideById);
 /**
  * @route   POST /api/guides
  * @desc    Create new guide
- * @access  Protected
+ * @access  Protected (Admin only)
  */
-router.post('/', createGuide);
+router.post('/', adminMiddleware, createGuide);
 
 /**
  * @route   PUT /api/guides/:id
  * @desc    Update guide
- * @access  Protected
+ * @access  Protected (Admin only)
  */
-router.put('/:id', updateGuide);
+router.put('/:id', adminMiddleware, updateGuide);
 
 /**
  * @route   DELETE /api/guides/:id
  * @desc    Delete guide
- * @access  Protected
+ * @access  Protected (Admin only)
  */
-router.delete('/:id', deleteGuide);
+router.delete('/:id', adminMiddleware, deleteGuide);
 
 export default router;

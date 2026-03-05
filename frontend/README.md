@@ -80,4 +80,4 @@ frontend/
 ## Demo Credentials
 
 - Email: `admin@vjn.com`
-- Password: (any password works with mock backend)
+- Password: `admin123`

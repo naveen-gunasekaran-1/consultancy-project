@@ -1,8 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Backend URL - using local IP for iOS simulator connectivity
-const API_BASE_URL = 'http://172.23.245.30:3000/api';
+// Backend URL - detect platform and use appropriate URL
+const API_BASE_URL = Platform.OS === 'web' 
+  ? 'http://localhost:3000/api'
+  : 'http://10.130.73.28:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

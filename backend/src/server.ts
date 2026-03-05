@@ -1,7 +1,8 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import { connectDB } from './config/db';
 import { config } from './config/env';
+import { logger } from './utils/logger';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -15,6 +16,7 @@ import aiRoutes from './routes/aiRoutes';
 
 // Import middleware
 import { authMiddleware } from './middleware/authMiddleware';
+import { requestLogger } from './middleware/requestLogger';
 
 const app: Application = express();
 
@@ -25,6 +27,7 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 // Health check route
 app.get('/', (req: Request, res: Response) => {
@@ -38,31 +41,44 @@ app.get('/', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 
-// Protected routes (TODO: Add authMiddleware to secure these routes)
-app.use('/api/guides', guideRoutes); // TODO: Add authMiddleware
-app.use('/api/invoices', invoiceRoutes); // TODO: Add authMiddleware
-app.use('/api/payments', paymentRoutes); // TODO: Add authMiddleware
-app.use('/api/workers', workerRoutes); // TODO: Add authMiddleware
-app.use('/api/clients', clientRoutes); // TODO: Add authMiddleware
-app.use('/api/reports', reportRoutes); // TODO: Add authMiddleware
-app.use('/api/ai', aiRoutes); // TODO: Add authMiddleware
+// Protected routes
+app.use('/api/guides', authMiddleware, guideRoutes);
+app.use('/api/invoices', authMiddleware, invoiceRoutes);
+app.use('/api/payments', authMiddleware, paymentRoutes);
+app.use('/api/workers', authMiddleware, workerRoutes);
+app.use('/api/clients', authMiddleware, clientRoutes);
+app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
+  logger.warn('request.not_found', {
+    requestId: req.requestId,
+    method: req.method,
+    path: req.originalUrl,
+  });
   res.status(404).json({ message: 'Route not found' });
 });
 
 // Error handler
-app.use((err: any, req: Request, res: Response, next: any) => {
-  console.error(err.stack);
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  logger.error('request.unhandled_error', {
+    requestId: req.requestId,
+    method: req.method,
+    path: req.originalUrl,
+    error: err,
+  });
   res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
 // Start server
 const PORT = config.port;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${config.nodeEnv}`);
+  logger.info('server.started', {
+    port: PORT,
+    environment: config.nodeEnv,
+    logLevel: config.logLevel,
+  });
 });
 
 export default app;

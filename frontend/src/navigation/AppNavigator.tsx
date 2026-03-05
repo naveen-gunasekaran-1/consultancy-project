@@ -79,7 +79,16 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          headerShown: false,
+          headerShown: true,
+          headerTitle: 'VJN WAY TO SUCCESS',
+          headerTitleAlign: 'center',
+          headerStyle: {
+            backgroundColor: '#ffffff',
+          },
+          headerTitleStyle: {
+            color: '#111111',
+            fontWeight: '700',
+          },
         }}
       >
         <Stack.Screen name="Login" component={LoginScreen} />

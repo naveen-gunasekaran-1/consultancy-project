@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
+  Dimensions,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,8 +38,9 @@ const LoginScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>VJN Way To Success</Text>
+      <View style={styles.wrapper}>
+        <View style={styles.content}>
+          <Text style={styles.title}>VJN Way To Success</Text>
         <Text style={styles.subtitle}>Billing & Inventory System</Text>
 
         <TextInput
@@ -70,8 +73,9 @@ const LoginScreen = ({ navigation }: any) => {
         </TouchableOpacity>
 
         <Text style={styles.hint}>
-          Demo: admin@vjn.com / any password
+          Demo: admin@vjn.com / admin123
         </Text>
+        </View>
       </View>
     </View>
   );
@@ -82,17 +86,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
+  },
+  wrapper: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 450 : undefined,
   },
   content: {
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+      },
+    }),
   },
   title: {
     fontSize: 24,

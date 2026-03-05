@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { reportAPI } from '../services/api';
 
@@ -38,7 +39,8 @@ const DashboardScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.wrapper}>
       <Text style={styles.header}>Dashboard</Text>
 
       <View style={styles.statsGrid}>
@@ -87,6 +89,7 @@ const DashboardScreen = ({ navigation }: any) => {
           <Text style={styles.actionButtonText}>View Reports</Text>
         </TouchableOpacity>
       </View>
+      </View>
     </ScrollView>
   );
 };
@@ -95,6 +98,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  contentContainer: {
+    alignItems: Platform.OS === 'web' ? 'center' : undefined,
+  },
+  wrapper: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 1200 : undefined,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 0,
   },
   centerContainer: {
     flex: 1,
@@ -111,13 +122,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 10,
+    justifyContent: Platform.OS === 'web' ? 'space-between' : undefined,
   },
   statCard: {
-    width: '48%',
+    width: Platform.OS === 'web' ? '23%' : '48%',
+    minWidth: Platform.OS === 'web' ? 200 : undefined,
     margin: '1%',
     padding: 20,
     borderRadius: 10,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 2,
+      },
+    }),
   },
   statValue: {
     fontSize: 24,

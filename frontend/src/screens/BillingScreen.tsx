@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { invoiceAPI } from '../services/api';
 
@@ -41,7 +42,8 @@ const BillingScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.wrapper}>
       <Text style={styles.header}>Create Invoice</Text>
 
       <View style={styles.section}>
@@ -93,6 +95,7 @@ const BillingScreen = ({ navigation }: any) => {
       <Text style={styles.note}>
         Note: This is a placeholder screen. Implement full billing logic.
       </Text>
+      </View>
     </ScrollView>
   );
 };
@@ -101,6 +104,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  contentContainer: {
+    alignItems: Platform.OS === 'web' ? 'center' : undefined,
+  },
+  wrapper: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 1200 : undefined,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 0,
   },
   header: {
     fontSize: 28,
@@ -113,6 +124,14 @@ const styles = StyleSheet.create({
     margin: 10,
     padding: 15,
     borderRadius: 10,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 2,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',

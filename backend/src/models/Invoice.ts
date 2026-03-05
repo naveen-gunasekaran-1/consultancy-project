@@ -13,6 +13,9 @@ export interface IInvoice extends Document {
   clientId: mongoose.Types.ObjectId;
   items: IInvoiceItem[];
   totalAmount: number;
+  discount?: number;
+  notes?: string;
+  status: 'paid' | 'unpaid' | 'partial';
   date: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +49,18 @@ const InvoiceSchema: Schema = new Schema(
     totalAmount: {
       type: Number,
       required: true,
+    },
+    discount: {
+      type: Number,
+      default: 0,
+    },
+    notes: {
+      type: String,
+    },
+    status: {
+      type: String,
+      enum: ['paid', 'unpaid', 'partial'],
+      default: 'unpaid',
     },
     date: {
       type: Date,

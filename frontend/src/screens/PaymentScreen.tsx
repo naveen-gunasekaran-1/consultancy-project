@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { paymentAPI } from '../services/api';
 
@@ -123,13 +124,23 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 10,
+    alignSelf: Platform.OS === 'web' ? 'center' : undefined,
+    width: Platform.OS === 'web' ? '100%' : undefined,
+    maxWidth: Platform.OS === 'web' ? 1200 : undefined,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 2,
+      },
+    }),
   },
   cardHeader: {
     flexDirection: 'row',

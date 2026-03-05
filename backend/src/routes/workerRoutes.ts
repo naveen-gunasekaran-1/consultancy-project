@@ -6,6 +6,7 @@ import {
   updateWorker,
   deleteWorker,
 } from '../controllers/workerController';
+import { adminMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -28,20 +29,20 @@ router.get('/:id', getWorkerById);
  * @desc    Create new worker
  * @access  Protected (Admin only)
  */
-router.post('/', createWorker);
+router.post('/', adminMiddleware, createWorker);
 
 /**
  * @route   PUT /api/workers/:id
  * @desc    Update worker
  * @access  Protected (Admin only)
  */
-router.put('/:id', updateWorker);
+router.put('/:id', adminMiddleware, updateWorker);
 
 /**
  * @route   DELETE /api/workers/:id
  * @desc    Delete/Deactivate worker
  * @access  Protected (Admin only)
  */
-router.delete('/:id', deleteWorker);
+router.delete('/:id', adminMiddleware, deleteWorker);
 
 export default router;

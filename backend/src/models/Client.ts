@@ -6,6 +6,7 @@ export interface IClient extends Document {
   phone: string;
   address: string;
   email?: string;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +31,10 @@ const ClientSchema: Schema = new Schema(
     },
     email: {
       type: String,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {

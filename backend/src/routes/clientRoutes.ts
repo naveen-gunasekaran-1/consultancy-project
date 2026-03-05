@@ -6,6 +6,7 @@ import {
   updateClient,
   deleteClient,
 } from '../controllers/clientController';
+import { adminMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -26,22 +27,22 @@ router.get('/:id', getClientById);
 /**
  * @route   POST /api/clients
  * @desc    Create new client
- * @access  Protected
+ * @access  Protected (Admin only)
  */
-router.post('/', createClient);
+router.post('/', adminMiddleware, createClient);
 
 /**
  * @route   PUT /api/clients/:id
  * @desc    Update client
- * @access  Protected
+ * @access  Protected (Admin only)
  */
-router.put('/:id', updateClient);
+router.put('/:id', adminMiddleware, updateClient);
 
 /**
  * @route   DELETE /api/clients/:id
  * @desc    Delete client
- * @access  Protected
+ * @access  Protected (Admin only)
  */
-router.delete('/:id', deleteClient);
+router.delete('/:id', adminMiddleware, deleteClient);
 
 export default router;

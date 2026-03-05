@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { reportAPI, aiAPI } from '../services/api';
 
@@ -144,13 +145,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     padding: 20,
     color: '#333',
+    textAlign: Platform.OS === 'web' ? 'center' : undefined,
   },
   section: {
     backgroundColor: '#fff',
     margin: 10,
+    marginHorizontal: Platform.OS === 'web' ? 'auto' : 10,
     padding: 15,
     borderRadius: 10,
-    elevation: 2,
+    maxWidth: Platform.OS === 'web' ? 1200 : undefined,
+    width: Platform.OS === 'web' ? '95%' : undefined,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      },
+      default: {
+        elevation: 2,
+      },
+    }),
   },
   sectionTitle: {
     fontSize: 18,

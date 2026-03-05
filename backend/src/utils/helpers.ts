@@ -26,7 +26,7 @@ export const formatCurrency = (amount: number): string => {
  * Format date
  */
 export const formatDate = (date: Date): string => {
-  return new Intl.DateFormat('en-IN', {
+  return new Intl.DateTimeFormat('en-IN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
