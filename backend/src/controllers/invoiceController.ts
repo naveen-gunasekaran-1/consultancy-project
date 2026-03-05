@@ -1,33 +1,62 @@
 import { Request, Response } from 'express';
-import Invoice from '../models/Invoice';
-import Guide from '../models/Guide';
-import Client from '../models/Client';
-import { generateInvoiceNumber } from '../utils/helpers';
+import invoiceRepository from '../repositories/invoiceRepository';
+import clientRepository from '../repositories/clientRepository';
+import guideRepository from '../repositories/guideRepository';
 import { logger } from '../utils/logger';
 import { InvoicePDFGenerator } from '../utils/invoicePDFGenerator';
+
+const VALID_STATUSES = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+
+const parseId = (id: string | number): number | null => {
+  const value = typeof id === 'number' ? id : parseInt(String(id), 10);
+  if (Number.isNaN(value) || value <= 0) {
+    return null;
+  }
+  return value;
+};
+
+const mapClient = (client: any) => ({
+  ...client,
+  _id: String(client.id),
+  isActive: Boolean(client.isActive),
+});
+
+const mapInvoice = (invoice: any, client?: any) => ({
+  ...invoice,
+  _id: String(invoice.id),
+  invoiceDate: invoice.createdAt,
+  clientId: client ? mapClient(client) : String(invoice.clientId),
+  items: (invoice.items || []).map((item: any) => ({
+    ...item,
+    _id: String(item.id),
+    guideId: String(item.guideId),
+  })),
+  isActive: Boolean(invoice.isActive),
+});
 
 export const getAllInvoices = async (req: Request, res: Response): Promise<void> => {
   try {
     logger.info('invoice.get_all', { requestId: req.requestId });
-    
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 20;
     const skip = (page - 1) * limit;
-    
-    const total = await Invoice.countDocuments();
-    
-    const invoices = await Invoice.find()
-      .populate('clientId')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    
+
+    const allInvoices = invoiceRepository.findAll();
+    const total = allInvoices.length;
+    const pagedInvoices = allInvoices.slice(skip, skip + limit);
+
+    const invoices = pagedInvoices.map((invoice) => {
+      const client = clientRepository.findById(invoice.clientId);
+      return mapInvoice(invoice, client);
+    });
+
     logger.info('invoice.get_all.success', {
       requestId: req.requestId,
       count: invoices.length,
       total,
     });
-    
+
     res.status(200).json({
       success: true,
       count: invoices.length,
@@ -48,13 +77,17 @@ export const getAllInvoices = async (req: Request, res: Response): Promise<void>
 export const getInvoiceById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     logger.info('invoice.get_by_id', { requestId: req.requestId, invoiceId: id });
-    
-    const invoice = await Invoice.findById(id)
-      .populate('clientId')
-      .populate('items.guideId');
-    
+
+    const invoiceId = parseId(id);
+    if (!invoiceId) {
+      res.status(400).json({ message: 'Invalid invoice ID format' });
+      return;
+    }
+
+    const invoice = invoiceRepository.findById(invoiceId);
+
     if (!invoice) {
       logger.warn('invoice.get_by_id.not_found', {
         requestId: req.requestId,
@@ -63,10 +96,12 @@ export const getInvoiceById = async (req: Request, res: Response): Promise<void>
       res.status(404).json({ message: 'Invoice not found' });
       return;
     }
-    
+
+    const client = clientRepository.findById(invoice.clientId);
+
     res.status(200).json({
       success: true,
-      data: invoice,
+      data: mapInvoice(invoice, client),
     });
   } catch (error) {
     logger.error('invoice.get_by_id.error', {
@@ -80,25 +115,26 @@ export const getInvoiceById = async (req: Request, res: Response): Promise<void>
 export const createInvoice = async (req: Request, res: Response): Promise<void> => {
   try {
     const { clientId, items, taxPercentage = 0, dueDate, notes } = req.body;
-    
+
     logger.info('invoice.create', {
       requestId: req.requestId,
       clientId,
       itemCount: items?.length,
     });
-    
+
     if (!clientId || !items || !Array.isArray(items) || items.length === 0) {
       logger.warn('invoice.create.validation_failed', {
         requestId: req.requestId,
         reason: 'missing_required_fields',
       });
-      res.status(400).json({ 
-        message: 'Client ID and at least one item are required' 
+      res.status(400).json({
+        message: 'Client ID and at least one item are required',
       });
       return;
     }
 
-    if (!clientId.match(/^[0-9a-fA-F]{24}$/)) {
+    const parsedClientId = parseId(clientId);
+    if (!parsedClientId) {
       logger.warn('invoice.create.validation_failed', {
         requestId: req.requestId,
         reason: 'invalid_client_id',
@@ -107,7 +143,7 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const client = await Client.findById(clientId);
+    const client = clientRepository.findById(parsedClientId);
     if (!client) {
       logger.warn('invoice.create.failed', {
         requestId: req.requestId,
@@ -117,22 +153,27 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    let subtotal = 0;
-    const processedItems: any[] = [];
+    const processedItems: Array<{
+      guideId: number;
+      guideName: string;
+      quantity: number;
+      unitPrice: number;
+    }> = [];
 
     for (const item of items) {
-      if (!item.guideId || !item.quantity || !item.unitPrice) {
+      if (!item.guideId || !item.quantity || item.unitPrice === undefined) {
         logger.warn('invoice.create.validation_failed', {
           requestId: req.requestId,
           reason: 'invalid_item_fields',
         });
-        res.status(400).json({ 
-          message: 'Each item must have guideId, quantity, and unitPrice' 
+        res.status(400).json({
+          message: 'Each item must have guideId, quantity, and unitPrice',
         });
         return;
       }
 
-      if (!item.guideId.match(/^[0-9a-fA-F]{24}$/)) {
+      const parsedGuideId = parseId(item.guideId);
+      if (!parsedGuideId) {
         logger.warn('invoice.create.validation_failed', {
           requestId: req.requestId,
           reason: 'invalid_guide_id',
@@ -141,8 +182,8 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
         return;
       }
 
-      const quantity = parseInt(item.quantity);
-      const price = parseFloat(item.unitPrice);
+      const quantity = parseInt(String(item.quantity), 10);
+      const price = parseFloat(String(item.unitPrice));
 
       if (quantity <= 0) {
         logger.warn('invoice.create.validation_failed', {
@@ -153,7 +194,7 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
         return;
       }
 
-      if (price < 0) {
+      if (price < 0 || Number.isNaN(price)) {
         logger.warn('invoice.create.validation_failed', {
           requestId: req.requestId,
           reason: 'invalid_price',
@@ -162,63 +203,54 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
         return;
       }
 
-      const guide = await Guide.findById(item.guideId);
-      
+      const guide = guideRepository.findById(parsedGuideId);
       if (!guide) {
         logger.warn('invoice.create.failed', {
           requestId: req.requestId,
           reason: 'guide_not_found',
           guideId: item.guideId,
         });
-        res.status(404).json({ 
-          message: `Guide with ID ${item.guideId} not found` 
+        res.status(404).json({
+          message: `Guide with ID ${item.guideId} not found`,
         });
         return;
       }
 
-      const itemTotal = quantity * price;
-      subtotal += itemTotal;
-      
       processedItems.push({
-        guideId: item.guideId,
+        guideId: parsedGuideId,
         guideName: guide.name,
         quantity,
         unitPrice: price,
-        total: itemTotal,
       });
     }
 
-    const tax = Math.round((subtotal * taxPercentage) / 100 * 100) / 100;
-    const total = subtotal + tax;
+    const parsedTaxPercentage = Number(taxPercentage);
+    if (Number.isNaN(parsedTaxPercentage) || parsedTaxPercentage < 0 || parsedTaxPercentage > 100) {
+      res.status(400).json({ message: 'Tax percentage must be between 0 and 100' });
+      return;
+    }
 
-    const invoiceNumber = await generateInvoiceNumber();
-    
-    const invoice = await Invoice.create({
-      invoiceNumber,
-      clientId,
+    const computedDueDate = dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const invoice = invoiceRepository.create({
+      clientId: parsedClientId,
       items: processedItems,
-      subtotal,
-      tax,
-      taxPercentage,
-      total,
-      dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      taxPercentage: parsedTaxPercentage,
+      dueDate: computedDueDate,
       notes: notes || '',
-      status: 'draft',
     });
 
-    const populatedInvoice = await Invoice.findById(invoice._id).populate('clientId');
-    
     logger.info('invoice.create.success', {
       requestId: req.requestId,
-      invoiceId: invoice._id,
-      invoiceNumber,
-      total,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      total: invoice.total,
     });
-    
+
     res.status(201).json({
       success: true,
       message: 'Invoice created successfully',
-      data: populatedInvoice,
+      data: mapInvoice(invoice, client),
     });
   } catch (error) {
     logger.error('invoice.create.error', {
@@ -240,16 +272,18 @@ export const updateInvoiceStatus = async (req: Request, res: Response): Promise<
       newStatus: status,
     });
 
-    if (!['draft', 'sent', 'paid', 'overdue', 'cancelled'].includes(status)) {
+    if (!VALID_STATUSES.includes(status)) {
       res.status(400).json({ message: 'Invalid status' });
       return;
     }
 
-    const invoice = await Invoice.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
+    const invoiceId = parseId(id);
+    if (!invoiceId) {
+      res.status(400).json({ message: 'Invalid invoice ID format' });
+      return;
+    }
+
+    const invoice = invoiceRepository.updateStatus(invoiceId, status);
 
     if (!invoice) {
       res.status(404).json({ message: 'Invoice not found' });
@@ -265,7 +299,7 @@ export const updateInvoiceStatus = async (req: Request, res: Response): Promise<
     res.status(200).json({
       success: true,
       message: 'Invoice status updated',
-      data: invoice,
+      data: mapInvoice(invoice),
     });
   } catch (error) {
     logger.error('invoice.update_status.error', {
@@ -284,9 +318,15 @@ export const deleteInvoice = async (req: Request, res: Response): Promise<void> 
       requestId: req.requestId,
       invoiceId: id,
     });
-    
-    const invoice = await Invoice.findByIdAndDelete(id);
-    
+
+    const invoiceId = parseId(id);
+    if (!invoiceId) {
+      res.status(400).json({ message: 'Invalid invoice ID format' });
+      return;
+    }
+
+    const invoice = invoiceRepository.findById(invoiceId);
+
     if (!invoice) {
       logger.warn('invoice.delete.not_found', {
         requestId: req.requestId,
@@ -296,11 +336,13 @@ export const deleteInvoice = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    invoiceRepository.delete(invoiceId);
+
     logger.info('invoice.delete.success', {
       requestId: req.requestId,
       invoiceId: id,
     });
-    
+
     res.status(200).json({
       success: true,
       message: 'Invoice deleted successfully',
@@ -323,7 +365,13 @@ export const downloadInvoicePDF = async (req: Request, res: Response): Promise<v
       invoiceId: id,
     });
 
-    const invoice = await Invoice.findById(id).populate('clientId');
+    const invoiceId = parseId(id);
+    if (!invoiceId) {
+      res.status(400).json({ message: 'Invalid invoice ID format' });
+      return;
+    }
+
+    const invoice = invoiceRepository.findById(invoiceId);
 
     if (!invoice) {
       logger.warn('invoice.download_pdf.not_found', {
@@ -334,18 +382,23 @@ export const downloadInvoicePDF = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const client = invoice.clientId as any;
+    const client = clientRepository.findById(invoice.clientId);
+    if (!client) {
+      res.status(404).json({ message: 'Client not found for invoice' });
+      return;
+    }
+
     const pdfStream = InvoicePDFGenerator.generate({
       invoiceNumber: invoice.invoiceNumber,
-      invoiceDate: invoice.invoiceDate,
-      dueDate: invoice.dueDate,
+      invoiceDate: new Date(invoice.createdAt),
+      dueDate: invoice.dueDate ? new Date(invoice.dueDate) : new Date(invoice.createdAt),
       clientName: client.name,
       clientEmail: client.email,
-      clientPhone: client.phone,
-      clientAddress: client.address,
-      clientCity: client.city,
-      clientState: client.state,
-      clientZipCode: client.zipCode,
+      clientPhone: client.phone || '',
+      clientAddress: client.address || '',
+      clientCity: client.city || '',
+      clientState: client.state || '',
+      clientZipCode: client.zipCode || '',
       items: invoice.items,
       subtotal: invoice.subtotal,
       tax: invoice.tax,

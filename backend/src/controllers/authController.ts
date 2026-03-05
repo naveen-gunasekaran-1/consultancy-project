@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import User from '../models/User';
+import userRepository from '../repositories/userRepository';
 import { config } from '../config/env';
 import { logger } from '../utils/logger';
 
-const generateToken = (user: { _id: unknown; email: string; role: string; tokenVersion: number }): string =>
+const generateToken = (user: { id: number; email: string; role: string; tokenVersion: number }): string =>
   jwt.sign(
     {
-      id: user._id,
+      id: user.id,
       email: user.email,
       role: user.role,
       tokenVersion: user.tokenVersion,
@@ -55,7 +55,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Find user in database
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = userRepository.findByEmail(normalizedEmail);
     
     if (!user) {
       logger.warn('auth.login.failed', {
@@ -74,7 +74,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       logger.warn('auth.login.failed', {
         requestId: req.requestId,
         reason: 'invalid_password',
-        userId: user._id,
+        userId: user.id,
       });
       res.status(401).json({ message: 'Invalid email or password' });
       return;
@@ -85,23 +85,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       logger.warn('auth.login.failed', {
         requestId: req.requestId,
         reason: 'inactive_user',
-        userId: user._id,
+        userId: user.id,
       });
       res.status(403).json({ message: 'Account is deactivated. Please contact administrator.' });
       return;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      { $inc: { tokenVersion: 1 }, $set: { lastLoginAt: new Date() } },
-      { new: true }
-    );
+    // Increment token version for security
+    userRepository.incrementTokenVersion(user.id);
+    const updatedUser = userRepository.findById(user.id);
 
     if (!updatedUser) {
       logger.error('auth.login.error', {
         requestId: req.requestId,
         reason: 'user_disappeared_during_update',
-        userId: user._id,
+        userId: user.id,
       });
       res.status(500).json({ message: 'Unable to complete login' });
       return;
@@ -111,17 +109,16 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     logger.info('auth.login.success', {
       requestId: req.requestId,
-      userId: updatedUser._id,
+      userId: updatedUser.id,
     });
 
     res.status(200).json({
       success: true,
       token,
       user: {
-        id: updatedUser._id,
+        id: updatedUser.id,
         email: updatedUser.email,
-        fullName: updatedUser.fullName,
-        username: updatedUser.username,
+        name: updatedUser.name,
         role: updatedUser.role,
       },
     });
@@ -136,9 +133,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, fullName, username } = req.body;
+    const { email, password, name } = req.body;
 
-    const existingUsersCount = await User.countDocuments();
+    const existingUsersCount = userRepository.count();
     if (existingUsersCount > 0) {
       logger.warn('auth.register.blocked_single_user_mode', {
         requestId: req.requestId,
@@ -180,7 +177,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = userRepository.findByEmail(email.toLowerCase());
     if (existingUser) {
       logger.warn('auth.register.failed', {
         requestId: req.requestId,
@@ -191,41 +188,23 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if username is taken (if provided)
-    if (username) {
-      const existingUsername = await User.findOne({ username });
-      if (existingUsername) {
-        logger.warn('auth.register.failed', {
-          requestId: req.requestId,
-          reason: 'username_taken',
-          username,
-        });
-        res.status(400).json({ message: 'Username is already taken' });
-        return;
-      }
-    }
-
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create user
-    const user = await User.create({
-      username: username || undefined,
-      fullName: fullName || 'Administrator',
+    const user = userRepository.create({
+      name: name || 'Administrator',
       email: email.toLowerCase(),
       password: hashedPassword,
       role: 'admin',
-      isActive: true,
-      tokenVersion: 1,
-      lastLoginAt: new Date(),
     });
 
     const token = generateToken(user);
 
     logger.info('auth.register.success', {
       requestId: req.requestId,
-      userId: user._id,
+      userId: user.id,
       email: user.email,
     });
 
@@ -234,10 +213,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       message: 'User registered successfully',
       token,
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
-        fullName: user.fullName,
-        username: user.username,
+        name: user.name,
         role: user.role,
       },
     });
@@ -259,7 +237,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    await User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
+    userRepository.incrementTokenVersion(userId);
 
     logger.info('auth.logout.success', {
       requestId: req.requestId,
@@ -288,7 +266,7 @@ export const verifyToken = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const user = await User.findById(userId).select('-password');
+    const user = userRepository.findById(userId);
     
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
@@ -304,10 +282,9 @@ export const verifyToken = async (req: Request, res: Response): Promise<void> =>
       success: true,
       message: 'Token is valid',
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
-        fullName: user.fullName,
-        username: user.username,
+        name: user.name,
         role: user.role,
       },
     });

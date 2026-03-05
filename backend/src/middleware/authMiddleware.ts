@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
-import User from '../models/User';
+import userRepository from '../repositories/userRepository';
 import { logger } from '../utils/logger';
 
 interface JwtPayload {
-  id: string;
+  id: number;
   email: string;
   role: string;
   tokenVersion: number;
@@ -41,7 +41,7 @@ export const authMiddleware = async (
     // Verify token
     const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
 
-    const user = await User.findById(decoded.id).select('email role isActive tokenVersion');
+    const user = userRepository.findById(decoded.id);
     if (!user || !user.isActive) {
       logger.warn('auth.user_not_active_or_missing', {
         requestId: req.requestId,

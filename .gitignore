@@ -4,3 +4,11 @@ build/
 .env
 *.log
 .DS_Store
+*.db
+*.sqlite
+*.bak
+*.tmp
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -55,12 +55,19 @@ async function ensureBackendRunning() {
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const backendScript = isDev ? 'dev' : 'start';
+  const sqliteDbPath = path.join(app.getPath('userData'), 'database.db');
 
   backendProcess = spawn(npmCommand, ['run', backendScript], {
     cwd: backendDir,
-    env: { ...process.env, PORT: '5000' },
+    env: {
+      ...process.env,
+      PORT: '5002',
+      SQLITE_DB_PATH: sqliteDbPath,
+    },
     stdio: 'inherit',
   });
+
+  console.log('[Desktop] SQLite path:', sqliteDbPath);
 
   backendProcess.on('error', (error) => {
     console.error('[Desktop] Failed to start backend process:', error);

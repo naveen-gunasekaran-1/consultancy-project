@@ -1,222 +1,213 @@
 import { Request, Response } from 'express';
-import Guide from '../models/Guide';
+import guideRepository from '../repositories/guideRepository';
+
+const parseId = (id: string): number | null => {
+  const value = parseInt(id, 10);
+  if (Number.isNaN(value) || value <= 0) {
+    return null;
+  }
+  return value;
+};
+
+const parseDescription = (description?: string): { subject: string; publisher: string } => {
+  if (!description) {
+    return { subject: '', publisher: 'Unknown' };
+  }
+  const [subject, publisher] = description.split(' - ');
+  return {
+    subject: subject || '',
+    publisher: publisher || 'Unknown',
+  };
+};
+
+const mapGuide = (guide: any) => {
+  const parsed = parseDescription(guide.description);
+  return {
+    ...guide,
+    _id: String(guide.id),
+    class: guide.category || '',
+    subject: parsed.subject,
+    quantity: guide.stock,
+    publisher: parsed.publisher,
+    isActive: Boolean(guide.isActive),
+  };
+};
 
 export const getAllGuides = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Pagination
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
-    
-    // Get total count
-    const total = await Guide.countDocuments();
-    
-    // Fetch guides with pagination
-    const guides = await Guide.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    
-    res.status(200).json({
-      success: true,
-      count: guides.length,
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-      data: guides,
-    });
-  } catch (error) {
-    console.error('Error fetching guides:', error);
-    res.status(500).json({ message: 'Error fetching guides', error });
-  }
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  
+  const guides = guideRepository.findAll().map(mapGuide);
+  const total = guides.length;
+  
+  // Apply pagination in memory
+  const skip = (page - 1) * limit;
+  const paginatedGuides = guides.slice(skip, skip + limit);
+  
+  res.status(200).json({
+    success: true,
+    count: paginatedGuides.length,
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    data: paginatedGuides,
+  });
 };
 
 export const getGuideById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    
-    // Validate ObjectId format
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      res.status(400).json({ message: 'Invalid guide ID format' });
-      return;
-    }
-    
-    const guide = await Guide.findById(id);
-    
-    if (!guide) {
-      res.status(404).json({ message: 'Guide not found' });
-      return;
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: guide,
-    });
-  } catch (error) {
-    console.error('Error fetching guide:', error);
-    res.status(500).json({ message: 'Error fetching guide', error });
+  const { id } = req.params;
+  const guideId = parseId(id);
+  if (!guideId) {
+    res.status(400).json({ message: 'Invalid guide ID format' });
+    return;
   }
+
+  const guide = guideRepository.findById(guideId);
+  
+  if (!guide) {
+    res.status(404).json({ message: 'Guide not found' });
+    return;
+  }
+  
+  res.status(200).json({
+    success: true,
+    data: mapGuide(guide),
+  });
 };
 
 export const createGuide = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, class: className, subject, price, quantity, publisher } = req.body;
-    
-    // Validation
-    if (!name || !className || !subject || price === undefined || quantity === undefined) {
-      res.status(400).json({ 
-        message: 'Missing required fields: name, class, subject, price, and quantity are required' 
-      });
-      return;
-    }
-
-    // Validate price and quantity are positive numbers
-    if (price < 0) {
-      res.status(400).json({ message: 'Price must be a positive number' });
-      return;
-    }
-
-    if (quantity < 0) {
-      res.status(400).json({ message: 'Quantity must be a positive number' });
-      return;
-    }
-
-    // Check for duplicate guide
-    const existingGuide = await Guide.findOne({ 
-      name: name.trim(), 
-      class: className.trim(),
-      subject: subject.trim()
+  const { name, class: className, subject, price, quantity, publisher } = req.body;
+  
+  if (!name || !className || !subject || price === undefined || quantity === undefined) {
+    res.status(400).json({ 
+      message: 'Missing required fields: name, class, subject, price, and quantity are required' 
     });
-
-    if (existingGuide) {
-      res.status(400).json({ 
-        message: 'A guide with the same name, class, and subject already exists' 
-      });
-      return;
-    }
-    
-    const guide = await Guide.create({
-      name: name.trim(),
-      class: className.trim(),
-      subject: subject.trim(),
-      price: parseFloat(price),
-      quantity: parseInt(quantity),
-      publisher: publisher?.trim() || 'Unknown',
-    });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Guide added successfully',
-      data: guide,
-    });
-  } catch (error) {
-    console.error('Error creating guide:', error);
-    res.status(500).json({ message: 'Error creating guide', error });
+    return;
   }
+
+  if (price < 0) {
+    res.status(400).json({ message: 'Price must be a positive number' });
+    return;
+  }
+
+  if (quantity < 0) {
+    res.status(400).json({ message: 'Quantity must be a positive number' });
+    return;
+  }
+  
+  const guide = guideRepository.create({
+    name: name.trim(),
+    description: `${subject.trim()}${publisher ? ` - ${publisher.trim()}` : ''}`,
+    category: className.trim(),
+    price: parseFloat(price),
+    stock: parseInt(quantity),
+  });
+  
+  res.status(201).json({
+    success: true,
+    message: 'Guide added successfully',
+    data: mapGuide(guide),
+  });
 };
 
 export const updateGuide = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-    
-    // Validate ObjectId format
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      res.status(400).json({ message: 'Invalid guide ID format' });
-      return;
-    }
-
-    // Validate price and quantity if provided
-    if (updateData.price !== undefined && updateData.price < 0) {
-      res.status(400).json({ message: 'Price must be a positive number' });
-      return;
-    }
-
-    if (updateData.quantity !== undefined && updateData.quantity < 0) {
-      res.status(400).json({ message: 'Quantity must be zero or positive' });
-      return;
-    }
-
-    // Trim string fields
-    if (updateData.name) updateData.name = updateData.name.trim();
-    if (updateData.class) updateData.class = updateData.class.trim();
-    if (updateData.subject) updateData.subject = updateData.subject.trim();
-    if (updateData.publisher) updateData.publisher = updateData.publisher.trim();
-    
-    const guide = await Guide.findByIdAndUpdate(id, updateData, { 
-      new: true,
-      runValidators: true 
-    });
-    
-    if (!guide) {
-      res.status(404).json({ message: 'Guide not found' });
-      return;
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Guide updated successfully',
-      data: guide,
-    });
-  } catch (error) {
-    console.error('Error updating guide:', error);
-    res.status(500).json({ message: 'Error updating guide', error });
+  const { id } = req.params;
+  const guideId = parseId(id);
+  if (!guideId) {
+    res.status(400).json({ message: 'Invalid guide ID format' });
+    return;
   }
+
+  const updateData = req.body;
+  
+  if (updateData.price !== undefined && updateData.price < 0) {
+    res.status(400).json({ message: 'Price must be a positive number' });
+    return;
+  }
+
+  if (updateData.quantity !== undefined && updateData.quantity < 0) {
+    res.status(400).json({ message: 'Quantity must be zero or positive' });
+    return;
+  }
+
+  // Trim string fields
+  if (updateData.name) updateData.name = updateData.name.trim();
+  if (updateData.class) {
+    updateData.category = String(updateData.class).trim();
+    delete updateData.class;
+  }
+  if (updateData.subject || updateData.publisher) {
+    const subject = updateData.subject ? String(updateData.subject).trim() : '';
+    const publisher = updateData.publisher ? String(updateData.publisher).trim() : '';
+    updateData.description = `${subject}${publisher ? ` - ${publisher}` : ''}`;
+    delete updateData.subject;
+    delete updateData.publisher;
+  }
+  if (updateData.quantity !== undefined) {
+    updateData.stock = parseInt(updateData.quantity, 10);
+    delete updateData.quantity;
+  }
+  
+  const guide = guideRepository.update(guideId, updateData);
+  
+  if (!guide) {
+    res.status(404).json({ message: 'Guide not found' });
+    return;
+  }
+  
+  res.status(200).json({
+    success: true,
+    message: 'Guide updated successfully',
+    data: mapGuide(guide),
+  });
 };
 
 export const deleteGuide = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    
-    // Validate ObjectId format
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      res.status(400).json({ message: 'Invalid guide ID format' });
-      return;
-    }
-    
-    const guide = await Guide.findByIdAndDelete(id);
-    
-    if (!guide) {
-      res.status(404).json({ message: 'Guide not found' });
-      return;
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Guide deleted successfully',
-    });
-  } catch (error) {
-    console.error('Error deleting guide:', error);
-    res.status(500).json({ message: 'Error deleting guide', error });
+  const { id } = req.params;
+  const guideId = parseId(id);
+  if (!guideId) {
+    res.status(400).json({ message: 'Invalid guide ID format' });
+    return;
   }
+
+  const guide = guideRepository.findById(guideId);
+  
+  if (!guide) {
+    res.status(404).json({ message: 'Guide not found' });
+    return;
+  }
+  
+  guideRepository.delete(guideId);
+  
+  res.status(200).json({
+    success: true,
+    message: 'Guide deleted successfully',
+  });
 };
 
 export const searchGuides = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { query } = req.query;
-    
-    if (!query || typeof query !== 'string') {
-      res.status(400).json({ message: 'Search query is required' });
-      return;
-    }
-
-    // Search across multiple fields
-    const guides = await Guide.find({
-      $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { subject: { $regex: query, $options: 'i' } },
-        { class: { $regex: query, $options: 'i' } },
-        { publisher: { $regex: query, $options: 'i' } },
-      ],
-    }).sort({ createdAt: -1 });
-    
-    res.status(200).json({
-      success: true,
-      count: guides.length,
-      data: guides,
-    });
-  } catch (error) {
-    console.error('Error searching guides:', error);
-    res.status(500).json({ message: 'Error searching guides', error });
+  const { query } = req.query;
+  
+  if (!query || typeof query !== 'string') {
+    res.status(400).json({ message: 'Search query is required' });
+    return;
   }
+
+  // Search across multiple fields (case-insensitive)
+  const allGuides = guideRepository.findAll();
+  const searchTerm = query.toLowerCase();
+  const guides = allGuides
+    .map(mapGuide)
+    .filter((guide) =>
+      guide.name.toLowerCase().includes(searchTerm) ||
+      guide.subject.toLowerCase().includes(searchTerm) ||
+      guide.class.toLowerCase().includes(searchTerm) ||
+      guide.publisher.toLowerCase().includes(searchTerm)
+    );
+  
+  res.status(200).json({
+    success: true,
+    count: guides.length,
+    data: guides,
+  });
 };
