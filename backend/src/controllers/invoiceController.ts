@@ -4,6 +4,7 @@ import Guide from '../models/Guide';
 import Client from '../models/Client';
 import { generateInvoiceNumber } from '../utils/helpers';
 import { logger } from '../utils/logger';
+import { InvoicePDFGenerator } from '../utils/invoicePDFGenerator';
 
 export const getAllInvoices = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -310,5 +311,65 @@ export const deleteInvoice = async (req: Request, res: Response): Promise<void> 
       error,
     });
     res.status(500).json({ message: 'Error deleting invoice', error });
+  }
+};
+
+export const downloadInvoicePDF = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    logger.info('invoice.download_pdf', {
+      requestId: req.requestId,
+      invoiceId: id,
+    });
+
+    const invoice = await Invoice.findById(id).populate('clientId');
+
+    if (!invoice) {
+      logger.warn('invoice.download_pdf.not_found', {
+        requestId: req.requestId,
+        invoiceId: id,
+      });
+      res.status(404).json({ message: 'Invoice not found' });
+      return;
+    }
+
+    const client = invoice.clientId as any;
+    const pdfStream = InvoicePDFGenerator.generate({
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate,
+      dueDate: invoice.dueDate,
+      clientName: client.name,
+      clientEmail: client.email,
+      clientPhone: client.phone,
+      clientAddress: client.address,
+      clientCity: client.city,
+      clientState: client.state,
+      clientZipCode: client.zipCode,
+      items: invoice.items,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax,
+      taxPercentage: invoice.taxPercentage,
+      total: invoice.total,
+      notes: invoice.notes,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice_${invoice.invoiceNumber}.pdf"`);
+
+    logger.info('invoice.download_pdf.success', {
+      requestId: req.requestId,
+      invoiceId: id,
+      invoiceNumber: invoice.invoiceNumber,
+    });
+
+    pdfStream.pipe(res);
+  } catch (error) {
+    logger.error('invoice.download_pdf.error', {
+      requestId: req.requestId,
+      invoiceId: req.params.id,
+      error,
+    });
+    res.status(500).json({ message: 'Error generating PDF', error });
   }
 };

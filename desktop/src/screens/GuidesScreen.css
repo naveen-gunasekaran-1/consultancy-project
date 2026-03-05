@@ -75,7 +75,28 @@
   transition: border-color 0.2s;
 }
 
+.modal select,
+.modal textarea {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.modal textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
 .modal input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.modal select:focus,
+.modal textarea:focus {
   outline: none;
   border-color: #667eea;
 }

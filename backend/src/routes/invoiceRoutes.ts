@@ -5,6 +5,7 @@ import {
   createInvoice,
   updateInvoiceStatus,
   deleteInvoice,
+  downloadInvoicePDF,
 } from '../controllers/invoiceController';
 
 const router = Router();
@@ -15,6 +16,13 @@ const router = Router();
  * @access  Protected
  */
 router.get('/', getAllInvoices);
+
+/**
+ * @route   GET /api/invoices/:id/pdf
+ * @desc    Download invoice as PDF
+ * @access  Protected
+ */
+router.get('/:id/pdf', downloadInvoicePDF);
 
 /**
  * @route   GET /api/invoices/:id

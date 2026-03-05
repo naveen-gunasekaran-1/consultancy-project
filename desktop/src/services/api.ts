@@ -58,8 +58,11 @@ export const invoiceAPI = {
   getAll: () => api.get('/invoices'),
   getById: (id: string) => api.get(`/invoices/${id}`),
   create: (data: any) => api.post('/invoices', data),
-  update: (id: string, data: any) => api.put(`/invoices/${id}`, data),
+  updateStatus: (id: string, status: string) => api.put(`/invoices/${id}/status`, { status }),
+  // Kept for compatibility with older callers.
+  update: (id: string, data: any) => api.put(`/invoices/${id}/status`, data),
   delete: (id: string) => api.delete(`/invoices/${id}`),
+  downloadPDF: (id: string) => api.get(`/invoices/${id}/pdf`, { responseType: 'blob' }),
 };
 
 export const paymentAPI = {
