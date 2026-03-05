@@ -3,7 +3,8 @@ import {
   getAllPayments,
   getPaymentById,
   createPayment,
-  updatePaymentStatus,
+  updatePaymentMethod,
+  deletePayment,
   getPaymentsByInvoice,
 } from '../controllers/paymentController';
 
@@ -17,18 +18,18 @@ const router = Router();
 router.get('/', getAllPayments);
 
 /**
- * @route   GET /api/payments/:id
- * @desc    Get payment by ID
- * @access  Protected
- */
-router.get('/:id', getPaymentById);
-
-/**
  * @route   GET /api/payments/invoice/:invoiceId
  * @desc    Get payments by invoice ID
  * @access  Protected
  */
 router.get('/invoice/:invoiceId', getPaymentsByInvoice);
+
+/**
+ * @route   GET /api/payments/:id
+ * @desc    Get payment by ID
+ * @access  Protected
+ */
+router.get('/:id', getPaymentById);
 
 /**
  * @route   POST /api/payments
@@ -38,10 +39,17 @@ router.get('/invoice/:invoiceId', getPaymentsByInvoice);
 router.post('/', createPayment);
 
 /**
- * @route   PUT /api/payments/:id/status
- * @desc    Update payment status
+ * @route   PUT /api/payments/:id
+ * @desc    Update payment method
  * @access  Protected
  */
-router.put('/:id/status', updatePaymentStatus);
+router.put('/:id', updatePaymentMethod);
+
+/**
+ * @route   DELETE /api/payments/:id
+ * @desc    Delete payment record
+ * @access  Protected
+ */
+router.delete('/:id', deletePayment);
 
 export default router;

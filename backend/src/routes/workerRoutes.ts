@@ -4,9 +4,9 @@ import {
   getWorkerById,
   createWorker,
   updateWorker,
+  updateWorkerEarnings,
   deleteWorker,
 } from '../controllers/workerController';
-import { adminMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -27,22 +27,29 @@ router.get('/:id', getWorkerById);
 /**
  * @route   POST /api/workers
  * @desc    Create new worker
- * @access  Protected (Admin only)
+ * @access  Protected
  */
-router.post('/', adminMiddleware, createWorker);
+router.post('/', createWorker);
 
 /**
  * @route   PUT /api/workers/:id
- * @desc    Update worker
- * @access  Protected (Admin only)
+ * @desc    Update worker details
+ * @access  Protected
  */
-router.put('/:id', adminMiddleware, updateWorker);
+router.put('/:id', updateWorker);
+
+/**
+ * @route   PUT /api/workers/:id/earnings
+ * @desc    Update worker earnings with commission
+ * @access  Protected
+ */
+router.put('/:id/earnings', updateWorkerEarnings);
 
 /**
  * @route   DELETE /api/workers/:id
  * @desc    Delete/Deactivate worker
- * @access  Protected (Admin only)
+ * @access  Protected
  */
-router.delete('/:id', adminMiddleware, deleteWorker);
+router.delete('/:id', deleteWorker);
 
 export default router;

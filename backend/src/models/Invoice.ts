@@ -4,26 +4,30 @@ interface IInvoiceItem {
   guideId: mongoose.Types.ObjectId;
   guideName: string;
   quantity: number;
-  price: number;
-  subtotal: number;
+  unitPrice: number;
+  total: number;
 }
 
 export interface IInvoice extends Document {
-  invoiceNo: string;
+  invoiceNumber: string;
   clientId: mongoose.Types.ObjectId;
   items: IInvoiceItem[];
-  totalAmount: number;
-  discount?: number;
+  subtotal: number;
+  tax: number;
+  taxPercentage: number;
+  total: number;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  invoiceDate: Date;
+  dueDate: Date;
   notes?: string;
-  status: 'paid' | 'unpaid' | 'partial';
-  date: Date;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const InvoiceSchema: Schema = new Schema(
   {
-    invoiceNo: {
+    invoiceNumber: {
       type: String,
       required: true,
       unique: true,
@@ -40,31 +44,58 @@ const InvoiceSchema: Schema = new Schema(
           ref: 'Guide',
           required: true,
         },
-        guideName: String,
-        quantity: Number,
-        price: Number,
-        subtotal: Number,
+        guideName: {
+          type: String,
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+        },
+        unitPrice: {
+          type: Number,
+          required: true,
+        },
+        total: {
+          type: Number,
+          required: true,
+        },
       },
     ],
-    totalAmount: {
+    subtotal: {
       type: Number,
       required: true,
     },
-    discount: {
+    tax: {
       type: Number,
       default: 0,
+    },
+    taxPercentage: {
+      type: Number,
+      default: 0,
+    },
+    total: {
+      type: Number,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'],
+      default: 'draft',
+    },
+    invoiceDate: {
+      type: Date,
+      default: Date.now,
+    },
+    dueDate: {
+      type: Date,
     },
     notes: {
       type: String,
     },
-    status: {
-      type: String,
-      enum: ['paid', 'unpaid', 'partial'],
-      default: 'unpaid',
-    },
-    date: {
-      type: Date,
-      default: Date.now,
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {

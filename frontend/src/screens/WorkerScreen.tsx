@@ -1,53 +1,357 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  TextInput,
   ActivityIndicator,
   Alert,
-  Platform,
-  Modal,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
 } from 'react-native';
-import { workerAPI } from '../services/api';
+import styles from '../styles/Screens';
+import { api } from '../services/api';
 
-const WorkerScreen = () => {
-  const [workers, setWorkers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingWorker, setEditingWorker] = useState<any | null>(null);
+interface Worker {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  role: string;
+  commissionRate: number;
+  totalEarnings: number;
+  performanceScore: number;
+  joinDate: string;
+  isActive: boolean;
+}
+
+const ROLES = ['sales', 'manager', 'admin', 'support'];
+
+export default function WorkerScreen() {
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   const [form, setForm] = useState({
     name: '',
-    role: '',
+    email: '',
     phone: '',
-    salary: '',
-    joinDate: '',
+    address: '',
+    role: 'sales',
+    commissionRate: '0',
   });
 
   useEffect(() => {
-    loadWorkers();
+    fetchWorkers();
   }, []);
 
-  const loadWorkers = async () => {
+  const fetchWorkers = async () => {
     try {
-      const response = await workerAPI.getAll();
-      setWorkers(response.data.data);
+      setLoading(true);
+      const response = await api.get('/workers');
+      setWorkers(response.data.data || []);
     } catch (error) {
-      console.error('Failed to load workers:', error);
-      Alert.alert('Error', 'Failed to load worker data');
+      Alert.alert('Error', 'Failed to fetch workers');
+      console.error(error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const openCreate = () => {
+  const handleAddOrUpdate = async () => {
+    if (!form.name || !form.email || !form.phone || !form.address) {
+      Alert.alert('Error', 'Please fill all required fields');
+      return;
+    }
+
+    const workerData = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+      role: form.role,
+      commissionRate: Number(form.commissionRate),
+    };
+
+    try {
+      if (editingWorker) {
+        const response = await api.put(`/workers/${editingWorker._id}`, workerData);
+        setWorkers(workers.map(w => w._id === editingWorker._id ? response.data.data : w));
+        Alert.alert('Success', 'Worker updated successfully');
+      } else {
+        const response = await api.post('/workers', workerData);
+        if (response.status === 201) {
+          setWorkers([response.data.data, ...workers]);
+          Alert.alert('Success', 'Worker created successfully');
+        }
+      }
+      resetForm();
+      setModalVisible(false);
+    } catch (error) {
+      Alert.alert('Error', editingWorker ? 'Failed to update worker' : 'Failed to create worker');
+      console.error(error);
+    }
+  };
+
+  const resetForm = () => {
     setEditingWorker(null);
-    setForm({ name: '', role: '', phone: '', salary: '', joinDate: '' });
-    setIsModalVisible(true);
+    setForm({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      role: 'sales',
+      commissionRate: '0',
+    });
+  };
+
+  const handleEdit = (worker: Worker) => {
+    setEditingWorker(worker);
+    setForm({
+      name: worker.name,
+      email: worker.email,
+      phone: worker.phone,
+      address: worker.address,
+      role: worker.role,
+      commissionRate: worker.commissionRate.toString(),
+    });
+    setModalVisible(true);
+  };
+
+  const handleDeleteWorker = (id: string) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to deactivate this worker?',
+      [
+        { text: 'Cancel', onPress: () => {} },
+        {
+          text: 'Deactivate',
+          onPress: async () => {
+            try {
+              await api.delete(`/workers/${id}`);
+              setWorkers(workers.filter(w => w._id !== id));
+              Alert.alert('Success', 'Worker deactivated');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to deactivate worker');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const getRoleColor = (role: string) => {
+    const colors: any = {
+      sales: '#3498db',
+      manager: '#e74c3c',
+      admin: '#9b59b6',
+      support: '#f39c12',
+    };
+    return colors[role] || '#95a5a6';
+  };
+
+  const getPerformanceColor = (score: number) => {
+    if (score >= 80) return '#27ae60';
+    if (score >= 60) return '#f39c12';
+    return '#e74c3c';
+  };
+
+  const renderWorkerItem = ({ item }: { item: Worker }) => (
+    <View style={styles.listItem}>
+      <View style={styles.listItemContent}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.listItemTitle}>{item.name}</Text>
+          <View style={{
+            backgroundColor: getRoleColor(item.role),
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 4,
+          }}>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>
+              {item.role.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.listItemSubtitle}>{item.email}</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+          <Text style={styles.listItemText}>📞 {item.phone}</Text>
+          <Text style={styles.listItemText}>📍 {item.address}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+          <Text style={styles.listItemText}>
+            Commission: {item.commissionRate}%
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.listItemText}>Performance: </Text>
+            <Text style={{
+              color: getPerformanceColor(item.performanceScore),
+              fontWeight: '600',
+            }}>
+              {item.performanceScore}/100
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.listItemText, { marginTop: 4, color: '#27ae60', fontWeight: '600' }]}>
+          Total Earnings: ₹{item.totalEarnings.toFixed(2)}
+        </Text>
+      </View>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={{ padding: 8 }}
+          onPress={() => handleEdit(item)}
+        >
+          <Text style={{ color: '#3498db', fontSize: 14, fontWeight: '600' }}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ padding: 8 }}
+          onPress={() => handleDeleteWorker(item._id)}
+        >
+          <Text style={{ color: '#e74c3c', fontSize: 14, fontWeight: '600' }}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (loading && workers.length === 0) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Workers</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => {
+            resetForm();
+            setModalVisible(true);
+          }}
+        >
+          <Text style={{ fontSize: 28, color: '#fff', fontWeight: '300' }}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={workers}
+        renderItem={renderWorkerItem}
+        keyExtractor={item => item._id}
+        style={styles.list}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No workers added yet</Text>
+        }
+      />
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {editingWorker ? 'Edit Worker' : 'Add New Worker'}
+              </Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={{ fontSize: 24, color: '#999' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.label}>Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Worker name"
+                value={form.name}
+                onChangeText={(text) => setForm({ ...form, name: text })}
+              />
+
+              <Text style={styles.label}>Email *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="worker@example.com"
+                value={form.email}
+                onChangeText={(text) => setForm({ ...form, email: text })}
+                keyboardType="email-address"
+              />
+
+              <Text style={styles.label}>Phone *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="+91-9999999999"
+                value={form.phone}
+                onChangeText={(text) => setForm({ ...form, phone: text })}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.label}>Address *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Worker address"
+                value={form.address}
+                onChangeText={(text) => setForm({ ...form, address: text })}
+              />
+
+              <Text style={styles.label}>Role *</Text>
+              <View style={styles.picker}>
+                {ROLES.map(role => (
+                  <TouchableOpacity
+                    key={role}
+                    style={[
+                      styles.pickerItem,
+                      form.role === role && {
+                        backgroundColor: getRoleColor(role),
+                        borderColor: getRoleColor(role),
+                      },
+                    ]}
+                    onPress={() => setForm({ ...form, role })}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerItemText,
+                        form.role === role && {
+                          color: '#fff',
+                          fontWeight: '600',
+                        },
+                      ]}
+                    >
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>Commission Rate (%)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                value={form.commissionRate}
+                onChangeText={(text) => setForm({ ...form, commissionRate: text })}
+                keyboardType="decimal-pad"
+              />
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleAddOrUpdate}
+              >
+                <Text style={styles.saveButtonText}>
+                  {editingWorker ? 'Update Worker' : 'Add Worker'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
   };
 
   const openEdit = (worker: any) => {

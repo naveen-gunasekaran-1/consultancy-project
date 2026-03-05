@@ -2,17 +2,28 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
+  Alert,
 } from 'react-native';
-import { reportAPI } from '../services/api';
+import styles from '../styles/Screens';
+import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-const DashboardScreen = ({ navigation }: any) => {
-  const [stats, setStats] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface DashboardStats {
+  sales: any;
+  clients: any;
+  workers: any;
+  invoices: any;
+  payments: any;
+  inventory: any;
+}
+
+export default function DashboardScreen({ navigation }: any) {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadDashboardData();
@@ -20,64 +31,286 @@ const DashboardScreen = ({ navigation }: any) => {
 
   const loadDashboardData = async () => {
     try {
-      const response = await reportAPI.getDashboardStats();
+      setLoading(true);
+      const response = await api.get('/reports/dashboard');
       setStats(response.data.data);
     } catch (error) {
-      console.error('Failed to load dashboard:', error);
-      // TODO: Show error message
+      Alert.alert('Error', 'Failed to load dashboard');
+      console.error(error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
+  const StatWidget = ({ icon, label, value, subtext, color }: any) => (
+    <View style={{
+      flex: 1,
+      backgroundColor: '#fff',
+      borderRadius: 12,
+      padding: 14,
+      marginHorizontal: 6,
+      marginVertical: 8,
+      borderLeftWidth: 5,
+      borderLeftColor: color,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+    }}>
+      <Text style={{ fontSize: 24, marginBottom: 8 }}>{icon}</Text>
+      <Text style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>{label}</Text>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color }}>{value}</Text>
+      {subtext && <Text style={{ fontSize: 10, color: '#ccc', marginTop: 4 }}>{subtext}</Text>}
+    </View>
+  );
+
+  const QuickActionButton = ({ icon, label, onPress }: any) => (
+    <TouchableOpacity
+      style={{
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 16,
+        marginRight: 10,
+        alignItems: 'center',
+        minWidth: 90,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+      }}
+      onPress={onPress}
+    >
+      <Text style={{ fontSize: 24, marginBottom: 6 }}>{icon}</Text>
+      <Text style={{ fontSize: 11, color: '#333', textAlign: 'center', fontWeight: '600' }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={styles.container}>
         <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.wrapper}>
-      <Text style={styles.header}>Dashboard</Text>
-
-      <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { backgroundColor: '#4CAF50' }]}>
-          <Text style={styles.statValue}>₹{stats?.todaySales || 0}</Text>
-          <Text style={styles.statLabel}>Today's Sales</Text>
-        </View>
-
-        <View style={[styles.statCard, { backgroundColor: '#2196F3' }]}>
-          <Text style={styles.statValue}>₹{stats?.monthSales || 0}</Text>
-          <Text style={styles.statLabel}>Month Sales</Text>
-        </View>
-
-        <View style={[styles.statCard, { backgroundColor: '#FF9800' }]}>
-          <Text style={styles.statValue}>₹{stats?.pendingPayments || 0}</Text>
-          <Text style={styles.statLabel}>Pending Payments</Text>
-        </View>
-
-        <View style={[styles.statCard, { backgroundColor: '#F44336' }]}>
-          <Text style={styles.statValue}>{stats?.lowStockAlerts || 0}</Text>
-          <Text style={styles.statLabel}>Low Stock Alerts</Text>
-        </View>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Welcome Header */}
+      <View style={{
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+      }}>
+        <Text style={{
+          fontSize: 14,
+          color: 'rgba(255,255,255,0.7)',
+          marginBottom: 4,
+        }}>
+          Welcome back,
+        </Text>
+        <Text style={{
+          fontSize: 24,
+          fontWeight: '700',
+          color: '#fff',
+          marginBottom: 8,
+        }}>
+          {user?.email || 'Admin'}
+        </Text>
+        <Text style={{
+          fontSize: 12,
+          color: 'rgba(255,255,255,0.8)',
+        }}>
+          Here's your business overview
+        </Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Billing')}
-        >
-          <Text style={styles.actionButtonText}>Create Invoice</Text>
-        </TouchableOpacity>
+      <View style={{ paddingHorizontal: 8 }}>
+        {/* Sales Overview */}
+        <Text style={[styles.label, { marginLeft: 8, marginTop: 16, marginBottom: 8 }]}>
+          💰 Sales Overview
+        </Text>
+        <View style={{ flexDirection: 'row', marginHorizontal: 0 }}>
+          <StatWidget 
+            icon="📈" 
+            label="Today" 
+            value={`₹${stats?.sales.today}`}
+            color="#3498db"
+          />
+          <StatWidget 
+            icon="📅" 
+            label="This Month" 
+            value={`₹${stats?.sales.thisMonth}`}
+            color="#2ecc71"
+          />
+        </View>
+        <View style={{ flexDirection: 'row', marginHorizontal: 0 }}>
+          <StatWidget 
+            icon="⏳" 
+            label="Pending" 
+            value={`₹${stats?.sales.pending}`}
+            color="#e74c3c"
+          />
+          <StatWidget 
+            icon="📋" 
+            label="Invoices" 
+            value={stats?.sales.todayInvoices}
+            subtext="today"
+            color="#f39c12"
+          />
+        </View>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Stock')}
+        {/* Business Metrics */}
+        <Text style={[styles.label, { marginLeft: 8, marginTop: 16, marginBottom: 8 }]}>
+          📊 Business Metrics
+        </Text>
+        <View style={{ flexDirection: 'row', marginHorizontal: 0 }}>
+          <StatWidget 
+            icon="👥" 
+            label="Clients" 
+            value={stats?.clients.total}
+            subtext={`${stats?.clients.active} active`}
+            color="#9b59b6"
+          />
+          <StatWidget 
+            icon="👨‍💼" 
+            label="Workers" 
+            value={stats?.workers.total}
+            color="#e67e22"
+          />
+        </View>
+
+        {/* Invoice Status */}
+        <Text style={[styles.label, { marginLeft: 8, marginTop: 16, marginBottom: 8 }]}>
+          📑 Invoice Status
+        </Text>
+        <View style={{
+          backgroundColor: '#fff',
+          borderRadius: 12,
+          padding: 14,
+          marginHorizontal: 6,
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 2 },
+        }}>
+          <View style={[{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            paddingVertical: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: '#e0e0e0',
+          }]}>
+            <View>
+              <Text style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Total</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>
+                {stats?.invoices.total}
+              </Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Paid ✓</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#27ae60' }}>
+                {stats?.invoices.paid}
+              </Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Active</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#3498db' }}>
+                {stats?.invoices.active}
+              </Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Overdue ⚠️</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#c0392b' }}>
+                {stats?.invoices.overdue}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Payment Collection */}
+        <Text style={[styles.label, { marginLeft: 8, marginTop: 16, marginBottom: 8 }]}>
+          💵 Payment Collection
+        </Text>
+        <View style={{
+          backgroundColor: '#fff',
+          borderRadius: 12,
+          padding: 14,
+          marginHorizontal: 6,
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 2 },
+        }}>
+          <View style={{ marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={{ fontSize: 12, color: '#666' }}>Collection Rate</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#3498db' }}>
+                {stats?.payments.collectionRate}%
+              </Text>
+            </View>
+            <View style={{
+              height: 8,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 4,
+              overflow: 'hidden',
+            }}>
+              <View
+                style={{
+                  height: '100%',
+                  width: `${stats?.payments.collectionRate || 0}%`,
+                  backgroundColor: '#3498db',
+                }}
+              />
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 12, color: '#666' }}>Received: ₹{stats?.payments.received}</Text>
+            <Text style={{ fontSize: 12, color: '#e74c3c' }}>Pending: ₹{stats?.payments.pending}</Text>
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <Text style={[styles.label, { marginLeft: 8, marginTop: 16, marginBottom: 12 }]}>
+          ⚡ Quick Actions
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: 6, marginBottom: 20 }}
+        >
+          <QuickActionButton
+            icon="🧾"
+            label="New Invoice"
+            onPress={() => navigation.navigate('Invoices')}
+          />
+          <QuickActionButton
+            icon="💰"
+            label="Payment"
+            onPress={() => navigation.navigate('Payments')}
+          />
+          <QuickActionButton
+            icon="👤"
+            label="Client"
+            onPress={() => navigation.navigate('Clients')}
+          />
+          <QuickActionButton
+            icon="👨‍💼"
+            label="Worker"
+            onPress={() => navigation.navigate('Workers')}
+          />
+          <QuickActionButton
+            icon="📊"
+            label="Reports"
+            onPress={() => navigation.navigate('Reports')}
+          />
+        </ScrollView>
+      </View>
+    </ScrollView>
+  );
+}
         >
           <Text style={styles.actionButtonText}>Manage Stock</Text>
         </TouchableOpacity>

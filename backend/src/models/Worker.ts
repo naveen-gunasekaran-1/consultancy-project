@@ -2,9 +2,13 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IWorker extends Document {
   name: string;
-  role: string;
+  email: string;
   phone: string;
-  salary: number;
+  address: string;
+  role: string;
+  commissionRate: number;
+  totalEarnings: number;
+  performanceScore: number;
   joinDate: Date;
   isActive: boolean;
   createdAt: Date;
@@ -17,18 +21,41 @@ const WorkerSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    role: {
+    email: {
       type: String,
       required: true,
+      unique: true,
+      lowercase: true,
     },
     phone: {
       type: String,
       required: true,
     },
-    salary: {
-      type: Number,
+    address: {
+      type: String,
       required: true,
+    },
+    role: {
+      type: String,
+      required: true,
+      enum: ['sales', 'manager', 'admin', 'support'],
+    },
+    commissionRate: {
+      type: Number,
+      default: 0,
       min: 0,
+      max: 100,
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    performanceScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
     },
     joinDate: {
       type: Date,
