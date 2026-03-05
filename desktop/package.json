@@ -57,7 +57,9 @@
     "directories": {
       "buildResources": "public"
     },
+    "icon": "public/icon",
     "mac": {
+      "icon": "public/icon.icns",
       "target": [
         "dmg",
         "zip"
@@ -67,6 +69,7 @@
       "identity": null
     },
     "win": {
+      "icon": "public/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -82,7 +85,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico"
     }
   }
 }
