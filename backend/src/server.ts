@@ -1,6 +1,6 @@
 import express, { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
-import { connectDB } from './config/db';
+import { initializeDatabase, closeDatabase } from './config/database';
 import { config } from './config/env';
 import { logger } from './utils/logger';
 
@@ -13,6 +13,7 @@ import workerRoutes from './routes/workerRoutes';
 import clientRoutes from './routes/clientRoutes';
 import reportRoutes from './routes/reportRoutes';
 import aiRoutes from './routes/aiRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 // Import middleware
 import { authMiddleware } from './middleware/authMiddleware';
@@ -20,8 +21,8 @@ import { requestLogger } from './middleware/requestLogger';
 
 const app: Application = express();
 
-// Connect to MongoDB
-connectDB();
+// Initialize SQLite Database
+initializeDatabase();
 
 // Middleware
 app.use(cors());
@@ -49,6 +50,7 @@ app.use('/api/workers', authMiddleware, workerRoutes);
 app.use('/api/clients', authMiddleware, clientRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/analytics', authMiddleware, analyticsRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -73,11 +75,30 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
 // Start server
 const PORT = config.port;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info('server.started', {
     port: PORT,
     environment: config.nodeEnv,
     logLevel: config.logLevel,
+  });
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  logger.info('server.shutting_down');
+  server.close(() => {
+    closeDatabase();
+    logger.info('server.stopped');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  logger.info('server.shutting_down');
+  server.close(() => {
+    closeDatabase();
+    logger.info('server.stopped');
+    process.exit(0);
   });
 });
 

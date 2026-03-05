@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import AnalyticsDashboard from './screens/AnalyticsDashboard';
 import GuidesScreen from './screens/GuidesScreen';
 import ClientsScreen from './screens/ClientsScreen';
 import InvoicesScreen from './screens/InvoicesScreen';
@@ -19,6 +20,7 @@ function AppContent() {
       {isAuthenticated ? (
         <>
           <Route path="/dashboard" element={<DashboardScreen />} />
+          <Route path="/analytics" element={<AnalyticsDashboard />} />
           <Route path="/guides" element={<GuidesScreen />} />
           <Route path="/clients" element={<ClientsScreen />} />
           <Route path="/invoices" element={<InvoicesScreen />} />

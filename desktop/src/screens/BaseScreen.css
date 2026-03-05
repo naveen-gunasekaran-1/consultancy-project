@@ -1,7 +1,7 @@
 .dashboard-container {
   display: flex;
   height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--background);
 }
 
 .dashboard-content {
@@ -12,46 +12,57 @@
 }
 
 .dashboard-header {
-  background-color: white;
-  padding: 20px 30px;
-  border-bottom: 1px solid #e0e0e0;
+  background-color: var(--surface);
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .dashboard-header h1 {
   margin: 0;
-  color: #333;
-  font-size: 28px;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
 }
 
 .add-btn {
   padding: 10px 20px;
-  background-color: #4caf50;
+  background-color: var(--primary);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .add-btn:hover {
-  background-color: #45a049;
+  background-color: var(--secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .content-area {
   flex: 1;
-  padding: 30px;
+  padding: 32px;
   overflow-y: auto;
 }
 
 .empty-state {
   text-align: center;
   padding: 80px 40px;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border);
+  margin-top: 20px;
 }

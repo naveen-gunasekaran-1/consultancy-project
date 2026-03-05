@@ -383,6 +383,7 @@ const InvoicesScreen: React.FC = () => {
                     <td>Rs {Number(invoice.total || 0).toFixed(2)}</td>
                     <td>
                       <select
+                        className={`status-badge status-${invoice.status}`}
                         value={invoice.status}
                         onChange={(e) => handleStatusChange(invoice._id, e.target.value as Invoice['status'])}
                       >

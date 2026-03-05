@@ -3,36 +3,37 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  background: linear-gradient(135deg, var(--background) 0%, #E0E7FF 100%);
+  font-family: inherit;
 }
 
 .login-card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
   width: 100%;
-  max-width: 400px;
-  padding: 40px;
+  max-width: 440px;
+  padding: 48px 40px;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .login-header h1 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .login-header p {
-  margin: 10px 0 0 0;
-  color: #666;
-  font-size: 14px;
+  margin: 8px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
 }
 
 .login-form {
@@ -48,62 +49,70 @@
 }
 
 .form-group label {
-  font-weight: 600;
-  color: #333;
+  font-weight: 500;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .form-group input {
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.2s;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  color: var(--text-primary);
+  background-color: var(--surface);
+  transition: all 0.2s ease;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .form-group input:disabled {
-  background-color: #f5f5f5;
+  background-color: var(--background);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 
 .form-group input.error {
-  border-color: #d32f2f;
+  border-color: var(--danger);
 }
 
 .field-error {
-  color: #d32f2f;
-  font-size: 12px;
+  color: var(--danger);
+  font-size: 13px;
   margin-top: -4px;
 }
 
 .error-message {
-  color: #d32f2f;
+  color: var(--danger);
   font-size: 14px;
-  padding: 10px;
-  background-color: #ffebee;
-  border-radius: 4px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .submit-btn {
-  padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 14px;
+  background-color: var(--primary);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  margin-top: 8px;
 }
 
 .submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  background-color: var(--secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .submit-btn:disabled {
@@ -113,22 +122,24 @@
 
 .login-footer {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 24px;
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .toggle-btn {
   background: none;
   border: none;
-  color: #667eea;
+  color: var(--primary);
   cursor: pointer;
-  text-decoration: underline;
-  margin-left: 5px;
+  text-decoration: none;
   font-size: 14px;
   font-weight: 600;
+  margin-left: 6px;
+  transition: color 0.2s ease;
 }
 
 .toggle-btn:hover {
-  color: #764ba2;
+  color: var(--secondary);
+  text-decoration: underline;
 }

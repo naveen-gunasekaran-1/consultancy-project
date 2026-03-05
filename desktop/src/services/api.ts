@@ -81,4 +81,13 @@ export const workerAPI = {
   delete: (id: string) => api.delete(`/workers/${id}`),
 };
 
+export const analyticsAPI = {
+  getDashboard: () => api.get('/analytics/dashboard'),
+  getSalesTrend: (period?: 'week' | 'month') => api.get('/analytics/sales-trend', { params: { period } }),
+  getTopProducts: (limit?: number) => api.get('/analytics/top-products', { params: { limit } }),
+  getTopClients: (limit?: number) => api.get('/analytics/top-clients', { params: { limit } }),
+  getPaymentInsights: () => api.get('/analytics/payment-insights'),
+  getInventoryInsights: () => api.get('/analytics/inventory-insights'),
+};
+
 export default api;
