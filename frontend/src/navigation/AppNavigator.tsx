@@ -7,11 +7,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import StockScreen from '../screens/StockScreen';
-import BillingScreen from '../screens/BillingScreen';
+import InvoicesScreen from '../screens/InvoicesScreen';
 import PaymentScreen from '../screens/PaymentScreen';
-import WorkerScreen from '../screens/WorkerScreen';
-import ClientScreen from '../screens/ClientScreen';
 import ReportsScreen from '../screens/ReportsScreen';
+import ClientsScreen from '../screens/ClientsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -49,14 +48,21 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Billing"
-        component={BillingScreen}
+        name="Invoices"
+        component={InvoicesScreen}
         options={{
-          tabBarLabel: 'Billing',
+          tabBarLabel: 'Invoices',
         }}
       />
       <Tab.Screen
-        name="Payment"
+        name="Clients"
+        component={ClientsScreen}
+        options={{
+          tabBarLabel: 'Clients',
+        }}
+      />
+      <Tab.Screen
+        name="Payments"
         component={PaymentScreen}
         options={{
           tabBarLabel: 'Payments',
@@ -93,8 +99,6 @@ const AppNavigator = () => {
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Main" component={MainTabs} />
-        <Stack.Screen name="Workers" component={WorkerScreen} />
-        <Stack.Screen name="Clients" component={ClientScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

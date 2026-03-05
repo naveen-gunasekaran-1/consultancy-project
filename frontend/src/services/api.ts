@@ -2,10 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Backend URL - detect platform and use appropriate URL
-const API_BASE_URL = Platform.OS === 'web' 
-  ? 'http://localhost:3000/api'
-  : 'http://10.130.73.28:3000/api';
+// Backend URL - using environment variable or fallback
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

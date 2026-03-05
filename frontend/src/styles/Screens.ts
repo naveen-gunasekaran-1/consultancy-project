@@ -1,0 +1,255 @@
+import { StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  list: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  listItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    marginVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  listItemContent: {
+    flex: 1,
+  },
+  listItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  listItemSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  listItemText: {
+    fontSize: 13,
+    color: '#888',
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  loadingText: {
+    flex: 1,
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: '#999',
+  },
+  emptyText: {
+    flex: 1,
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
+    color: '#999',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '90%',
+    minHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalForm: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginVertical: 8,
+    fontSize: 14,
+    backgroundColor: '#fafafa',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  picker: {
+    marginVertical: 8,
+  },
+  pickerItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  pickerItemSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  pickerItemText: {
+    color: '#333',
+    fontSize: 14,
+  },
+  pickerItemTextSelected: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  itemAddSection: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 8,
+  },
+  addItemButton: {
+    backgroundColor: '#51cf66',
+    borderRadius: 6,
+    paddingVertical: 10,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  addItemButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  itemsSection: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 12,
+  },
+  addedItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 6,
+    marginVertical: 6,
+  },
+  addedItemName: {
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  addedItemDetails: {
+    fontSize: 12,
+    color: '#666',
+  },
+  totalsSection: {
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 12,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    color: '#666',
+  },
+  totalRowBold: {
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 10,
+    marginTop: 6,
+  },
+  totalRowBoldText: {
+    fontWeight: '700',
+    color: '#333',
+    fontSize: 16,
+  },
+  totalAmount: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  statusBadge: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
+  },
+});
+
+export default styles;

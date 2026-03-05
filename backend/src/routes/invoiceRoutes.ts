@@ -3,7 +3,7 @@ import {
   getAllInvoices,
   getInvoiceById,
   createInvoice,
-  updateInvoice,
+  updateInvoiceStatus,
   deleteInvoice,
 } from '../controllers/invoiceController';
 
@@ -31,11 +31,11 @@ router.get('/:id', getInvoiceById);
 router.post('/', createInvoice);
 
 /**
- * @route   PUT /api/invoices/:id
- * @desc    Update invoice
+ * @route   PUT /api/invoices/:id/status
+ * @desc    Update invoice status
  * @access  Protected
  */
-router.put('/:id', updateInvoice);
+router.put('/:id/status', updateInvoiceStatus);
 
 /**
  * @route   DELETE /api/invoices/:id
