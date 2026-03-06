@@ -21,8 +21,20 @@ import { requestLogger } from './middleware/requestLogger';
 
 const app: Application = express();
 
+console.log('[Server] Starting initialization...');
+console.log('[Server] Node version:', process.version);
+console.log('[Server] Platform:', process.platform);
+console.log('[Server] SQLITE_DB_PATH:', process.env.SQLITE_DB_PATH);
+console.log('[Server] PORT:', config.port);
+
 // Initialize SQLite Database
-initializeDatabase();
+try {
+  initializeDatabase();
+  console.log('[Server] Database initialized successfully');
+} catch (error) {
+  console.error('[Server] Failed to initialize database:', error);
+  process.exit(1);
+}
 
 // Middleware
 app.use(cors());
@@ -76,6 +88,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 // Start server
 const PORT = config.port;
 const server = app.listen(PORT, () => {
+  console.log('[Server] Express server listening on port:', PORT);
   logger.info('server.started', {
     port: PORT,
     environment: config.nodeEnv,

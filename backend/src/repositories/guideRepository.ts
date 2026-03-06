@@ -103,6 +103,17 @@ class GuideRepository {
     const stmt = this.db.prepare('SELECT * FROM guides WHERE stock < minStock AND isActive = 1');
     return stmt.all() as Guide[];
   }
+
+  checkStock(id: number, requiredQuantity: number): { available: boolean; currentStock: number } {
+    const guide = this.findById(id);
+    if (!guide) {
+      return { available: false, currentStock: 0 };
+    }
+    return {
+      available: guide.stock >= requiredQuantity,
+      currentStock: guide.stock,
+    };
+  }
 }
 
 export default new GuideRepository();

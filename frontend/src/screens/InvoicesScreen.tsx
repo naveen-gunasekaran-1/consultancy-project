@@ -207,6 +207,11 @@ const InvoicesScreen = () => {
                     {invoice.status.toUpperCase()}
                   </Text>
                 </View>
+                {invoice.status !== 'paid' && invoice.dueDate && (
+                  <Text style={styles.listItemText}>
+                    Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                  </Text>
+                )}
               </TouchableOpacity>
               <View style={styles.actionButtons}>
                 <TouchableOpacity

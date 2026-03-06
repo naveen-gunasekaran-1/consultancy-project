@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import paymentRepository from '../repositories/paymentRepository';
 import invoiceRepository from '../repositories/invoiceRepository';
+import workerRepository from '../repositories/workerRepository';
 import { logger } from '../utils/logger';
 
 const PAYMENT_METHODS = ['cash', 'upi', 'bank', 'cheque', 'credit_card'] as const;
@@ -15,6 +16,7 @@ const parseId = (id: string | number): number | null => {
 
 const mapPayment = (payment: any) => {
   const invoice = invoiceRepository.findById(payment.invoiceId);
+  const worker = payment.workerId ? workerRepository.findById(Number(payment.workerId)) : undefined;
   return {
     ...payment,
     _id: String(payment.id),
@@ -25,6 +27,14 @@ const mapPayment = (payment: any) => {
           total: invoice.total,
         }
       : String(payment.invoiceId),
+    workerId: worker
+      ? {
+          _id: String(worker.id),
+          name: worker.name,
+        }
+      : payment.workerId
+      ? String(payment.workerId)
+      : null,
     isActive: Boolean(payment.isActive),
   };
 };
@@ -88,7 +98,12 @@ export const getPaymentById = async (req: Request, res: Response): Promise<void>
 export const createPayment = async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
   const requestId = req.headers['x-request-id'] as string || 'unknown';
-  const { invoiceId, amount, paymentMethod, transactionId, notes } = req.body;
+  const { invoiceId, workerId, amount, paymentMethod, transactionId, notes, commissionPercentage, hasDispute, disputeNote } = req.body;
+  const parsedCommissionPercentage =
+    commissionPercentage === undefined || commissionPercentage === null || commissionPercentage === ''
+      ? null
+      : Number(commissionPercentage);
+  const disputeFlag = hasDispute === true || hasDispute === 1 || hasDispute === '1' || hasDispute === 'true';
   
   // Validation
   if (!invoiceId || !amount || !paymentMethod) {
@@ -115,6 +130,14 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
+  if (
+    parsedCommissionPercentage !== null &&
+    (Number.isNaN(parsedCommissionPercentage) || parsedCommissionPercentage < 0 || parsedCommissionPercentage > 100)
+  ) {
+    res.status(400).json({ success: false, message: 'Commission percentage must be between 0 and 100' });
+    return;
+  }
+
   // Check if invoice exists
   const parsedInvoiceId = parseId(invoiceId);
   if (!parsedInvoiceId) {
@@ -133,13 +156,53 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const payment = paymentRepository.create({
+  // Validate worker if provided
+  let worker = null;
+  if (workerId) {
+    const parsedWorkerId = parseId(workerId);
+    if (!parsedWorkerId) {
+      res.status(400).json({ success: false, message: 'Invalid worker ID format' });
+      return;
+    }
+    worker = workerRepository.findById(parsedWorkerId);
+    if (!worker) {
+      res.status(404).json({ success: false, message: 'Worker not found' });
+      return;
+    }
+  }
+
+  // Calculate commission
+  let workerCommissionAmount = 0;
+  let actualCommissionPercentage = parsedCommissionPercentage ?? 0;
+  
+  if (worker && parsedCommissionPercentage === null) {
+    actualCommissionPercentage = worker.commissionRate;
+  }
+
+  if (worker && actualCommissionPercentage > 0) {
+    workerCommissionAmount = (parsedAmount * actualCommissionPercentage) / 100;
+  }
+
+  const paymentData = {
     invoiceId: parsedInvoiceId,
+    workerId: worker ? worker.id : undefined,
     amount: parsedAmount,
     paymentMethod,
     transactionId,
     notes,
-  });
+    workerCommissionAmount,
+    commissionPercentage: actualCommissionPercentage,
+    hasDispute: disputeFlag ? 1 : 0,
+    disputeNote: disputeFlag ? disputeNote : null,
+  };
+
+  const payment = paymentRepository.create(paymentData);
+  
+  // Update worker earnings if applicable
+  if (worker && workerCommissionAmount > 0) {
+    const updatedEarnings = worker.totalEarnings + workerCommissionAmount;
+    workerRepository.update(worker.id, { totalEarnings: updatedEarnings });
+  }
   
   const duration = Date.now() - startTime;
   logger.info('createPayment', {
@@ -148,6 +211,9 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     invoiceId,
     amount: parsedAmount,
     paymentMethod,
+    workerId: worker?.id,
+    commission: workerCommissionAmount,
+    hasDispute,
     duration,
   });
   

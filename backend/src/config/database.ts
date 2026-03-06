@@ -27,6 +27,34 @@ const getDbPath = (): string => {
   return path.join(dataDir, 'database.db');
 };
 
+const hasColumn = (database: Database.Database, tableName: string, columnName: string): boolean => {
+  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  return columns.some((column) => column.name === columnName);
+};
+
+const addColumnIfMissing = (
+  database: Database.Database,
+  tableName: string,
+  columnName: string,
+  columnDefinition: string
+): void => {
+  if (!hasColumn(database, tableName, columnName)) {
+    database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`);
+    logger.info('database.column_migrated', { tableName, columnName });
+  }
+};
+
+const runSchemaMigrations = (database: Database.Database): void => {
+  // Keep older installations compatible by adding newly introduced payment fields.
+  addColumnIfMissing(database, 'payments', 'workerId', 'INTEGER');
+  addColumnIfMissing(database, 'payments', 'workerCommissionAmount', 'REAL DEFAULT 0');
+  addColumnIfMissing(database, 'payments', 'commissionPercentage', 'REAL DEFAULT 0');
+  addColumnIfMissing(database, 'payments', 'hasDispute', 'INTEGER DEFAULT 0');
+  addColumnIfMissing(database, 'payments', 'disputeNote', 'TEXT');
+
+  database.exec('CREATE INDEX IF NOT EXISTS idx_payments_worker ON payments(workerId)');
+};
+
 export const initializeDatabase = (): Database.Database => {
   try {
     const dbPath = getDbPath();
@@ -149,16 +177,22 @@ const createTables = () => {
     CREATE TABLE IF NOT EXISTS payments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       invoiceId INTEGER NOT NULL,
+      workerId INTEGER,
       amount REAL NOT NULL,
       paymentMethod TEXT NOT NULL,
       transactionId TEXT,
       paymentDate TEXT DEFAULT CURRENT_TIMESTAMP,
       receiptUrl TEXT,
       notes TEXT,
+      workerCommissionAmount REAL DEFAULT 0,
+      commissionPercentage REAL DEFAULT 0,
+      hasDispute INTEGER DEFAULT 0,
+      disputeNote TEXT,
       isActive INTEGER DEFAULT 1,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (invoiceId) REFERENCES invoices(id)
+      FOREIGN KEY (invoiceId) REFERENCES invoices(id),
+      FOREIGN KEY (workerId) REFERENCES workers(id)
     )
   `);
 
@@ -204,6 +238,8 @@ const createTables = () => {
     CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);
     CREATE INDEX IF NOT EXISTS idx_workers_email ON workers(email);
   `);
+
+  runSchemaMigrations(database);
 
   logger.info('database.tables_created');
 };

@@ -120,43 +120,49 @@ class InvoiceRepository {
     const tax = (subtotal * data.taxPercentage) / 100;
     const total = subtotal + tax;
     
-    // Start transaction
     const insertInvoice = this.db.prepare(`
       INSERT INTO invoices (invoiceNumber, clientId, subtotal, tax, taxPercentage, total, status, notes, dueDate)
       VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)
     `);
-    
-    const info = insertInvoice.run(
-      invoiceNumber,
-      data.clientId,
-      subtotal,
-      tax,
-      data.taxPercentage,
-      total,
-      data.notes || null,
-      data.dueDate || null
-    );
-    
-    const invoiceId = info.lastInsertRowid as number;
-    
-    // Insert invoice items
+
     const insertItem = this.db.prepare(`
       INSERT INTO invoice_items (invoiceId, guideId, guideName, quantity, unitPrice, total)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-    
-    data.items.forEach(item => {
-      insertItem.run(
-        invoiceId,
-        item.guideId,
-        item.guideName,
-        item.quantity,
-        item.unitPrice,
-        item.quantity * item.unitPrice
+
+    const decrementStock = this.db.prepare('UPDATE guides SET stock = stock - ? WHERE id = ?');
+
+    const createInvoiceTx = this.db.transaction(() => {
+      const info = insertInvoice.run(
+        invoiceNumber,
+        data.clientId,
+        subtotal,
+        tax,
+        data.taxPercentage,
+        total,
+        data.notes || null,
+        data.dueDate || null
       );
+
+      const invoiceId = info.lastInsertRowid as number;
+
+      data.items.forEach((item) => {
+        insertItem.run(
+          invoiceId,
+          item.guideId,
+          item.guideName,
+          item.quantity,
+          item.unitPrice,
+          item.quantity * item.unitPrice
+        );
+        decrementStock.run(item.quantity, item.guideId);
+      });
+
+      return invoiceId;
     });
-    
-    return this.findById(invoiceId)!;
+
+    const createdInvoiceId = createInvoiceTx();
+    return this.findById(createdInvoiceId)!;
   }
 
   updateStatus(id: number, status: string): Invoice | undefined {

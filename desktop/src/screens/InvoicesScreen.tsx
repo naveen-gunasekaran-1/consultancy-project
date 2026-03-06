@@ -34,6 +34,7 @@ interface Invoice {
   taxPercentage: number;
   total: number;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  dueDate?: string;
 }
 
 interface DraftItem {
@@ -372,6 +373,7 @@ const InvoicesScreen: React.FC = () => {
                   <th>Client</th>
                   <th>Total</th>
                   <th>Status</th>
+                  <th>Due Date</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -393,6 +395,13 @@ const InvoicesScreen: React.FC = () => {
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td>
+                      {invoice.status !== 'paid' && invoice.dueDate
+                        ? new Date(invoice.dueDate).toLocaleDateString()
+                        : invoice.status === 'paid'
+                        ? '—'
+                        : 'No date'}
                     </td>
                     <td>
                       <button className="edit-btn" onClick={() => handleDownloadPDF(invoice._id, invoice.invoiceNumber)}>

@@ -54,10 +54,32 @@
       "build/**/*",
       "public/electron.js"
     ],
+    "extraMetadata": {
+      "main": "build/electron.js"
+    },
+    "asarUnpack": [
+      "backend/**/*"
+    ],
     "directories": {
       "buildResources": "public"
     },
     "icon": "public/icon",
+    "extraFiles": [
+      {
+        "from": "../backend/dist",
+        "to": "backend/dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/node_modules",
+        "to": "backend/node_modules",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/package.json",
+        "to": "backend/package.json"
+      }
+    ],
     "mac": {
       "icon": "public/icon.icns",
       "target": [

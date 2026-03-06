@@ -159,6 +159,7 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
       quantity: number;
       unitPrice: number;
     }> = [];
+    const cumulativeQuantities = new Map<number, number>();
 
     for (const item of items) {
       if (!item.guideId || !item.quantity || item.unitPrice === undefined) {
@@ -215,6 +216,27 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
         });
         return;
       }
+
+      const cumulativeQuantity = (cumulativeQuantities.get(parsedGuideId) || 0) + quantity;
+
+      // Validate against cumulative quantity to handle repeated guide rows in one invoice.
+      const stockCheck = guideRepository.checkStock(parsedGuideId, cumulativeQuantity);
+      if (!stockCheck.available) {
+        logger.warn('invoice.create.failed', {
+          requestId: req.requestId,
+          reason: 'insufficient_stock',
+          guideId: item.guideId,
+          guideName: guide.name,
+          requestedQuantity: cumulativeQuantity,
+          availableStock: stockCheck.currentStock,
+        });
+        res.status(400).json({
+          message: `Insufficient stock for "${guide.name}". Available: ${stockCheck.currentStock}, Requested: ${cumulativeQuantity}`,
+        });
+        return;
+      }
+
+      cumulativeQuantities.set(parsedGuideId, cumulativeQuantity);
 
       processedItems.push({
         guideId: parsedGuideId,

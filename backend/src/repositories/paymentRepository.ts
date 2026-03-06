@@ -4,12 +4,17 @@ import Database from 'better-sqlite3';
 export interface Payment {
   id: number;
   invoiceId: number;
+  workerId?: number;
   amount: number;
   paymentMethod: string;
   transactionId?: string;
   paymentDate: string;
   receiptUrl?: string;
   notes?: string;
+  workerCommissionAmount: number;
+  commissionPercentage: number;
+  hasDispute: number;
+  disputeNote?: string;
   isActive: number;
   createdAt: string;
   updatedAt: string;
@@ -39,26 +44,36 @@ class PaymentRepository {
 
   create(data: {
     invoiceId: number;
+    workerId?: number;
     amount: number;
     paymentMethod: string;
     transactionId?: string;
     paymentDate?: string;
     receiptUrl?: string;
     notes?: string;
+    workerCommissionAmount?: number;
+    commissionPercentage?: number;
+    hasDispute?: number;
+    disputeNote?: string;
   }): Payment {
     const stmt = this.db.prepare(`
-      INSERT INTO payments (invoiceId, amount, paymentMethod, transactionId, paymentDate, receiptUrl, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO payments (invoiceId, workerId, amount, paymentMethod, transactionId, paymentDate, receiptUrl, notes, workerCommissionAmount, commissionPercentage, hasDispute, disputeNote)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
       data.invoiceId,
+      data.workerId || null,
       data.amount,
       data.paymentMethod,
       data.transactionId || null,
       data.paymentDate || new Date().toISOString(),
       data.receiptUrl || null,
-      data.notes || null
+      data.notes || null,
+      data.workerCommissionAmount || 0,
+      data.commissionPercentage || 0,
+      data.hasDispute || 0,
+      data.disputeNote || null
     );
 
     return this.findById(info.lastInsertRowid as number)!;
