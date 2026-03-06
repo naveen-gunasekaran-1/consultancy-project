@@ -57,10 +57,11 @@ export const validateClientForm = (data: any): ValidationError[] => {
     errors.push({ field: 'name', message: 'Client name is required' });
   }
 
-  if (!data.email || data.email.trim().length === 0) {
-    errors.push({ field: 'email', message: 'Email is required' });
-  } else if (!validateEmail(data.email)) {
-    errors.push({ field: 'email', message: 'Invalid email format' });
+  // Email is optional - only validate if provided
+  if (data.email && data.email.trim().length > 0) {
+    if (!validateEmail(data.email)) {
+      errors.push({ field: 'email', message: 'Invalid email format' });
+    }
   }
 
   if (!data.phone || data.phone.trim().length === 0) {
@@ -77,10 +78,11 @@ export const validateWorkerForm = (data: any): ValidationError[] => {
     errors.push({ field: 'name', message: 'Worker name is required' });
   }
 
-  if (!data.email || data.email.trim().length === 0) {
-    errors.push({ field: 'email', message: 'Email is required' });
-  } else if (!validateEmail(data.email)) {
-    errors.push({ field: 'email', message: 'Invalid email format' });
+  // Email is optional - only validate if provided
+  if (data.email && data.email.trim().length > 0) {
+    if (!validateEmail(data.email)) {
+      errors.push({ field: 'email', message: 'Invalid email format' });
+    }
   }
 
   if (!data.salary || isNaN(parseFloat(data.salary))) {

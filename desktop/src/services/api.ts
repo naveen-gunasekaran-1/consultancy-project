@@ -68,6 +68,7 @@ export const invoiceAPI = {
 export const paymentAPI = {
   getAll: () => api.get('/payments'),
   getById: (id: string) => api.get(`/payments/${id}`),
+  getByInvoiceId: (invoiceId: string) => api.get(`/payments/invoice/${invoiceId}`),
   create: (data: any) => api.post('/payments', data),
   update: (id: string, data: any) => api.put(`/payments/${id}`, data),
   delete: (id: string) => api.delete(`/payments/${id}`),
@@ -79,6 +80,27 @@ export const workerAPI = {
   create: (data: any) => api.post('/workers', data),
   update: (id: string, data: any) => api.put(`/workers/${id}`, data),
   delete: (id: string) => api.delete(`/workers/${id}`),
+};
+
+export const orderAPI = {
+  getAll: () => api.get('/orders'),
+  getById: (id: string) => api.get(`/orders/${id}`),
+  create: (data: any) => api.post('/orders', data),
+  update: (id: string, data: any) => api.put(`/orders/${id}`, data),
+  delete: (id: string) => api.delete(`/orders/${id}`),
+  getPending: () => api.get('/orders/pending'),
+};
+
+export const inventoryAPI = {
+  getAll: () => api.get('/inventory'),
+  getById: (id: string) => api.get(`/inventory/${id}`),
+  getByGuideId: (guideId: string) => api.get(`/inventory/guide/${guideId}`),
+  create: (data: any) => api.post('/inventory', data),
+  update: (id: string, data: any) => api.put(`/inventory/${id}`, data),
+  adjustStock: (id: string, adjustment: number, reason?: string) => 
+    api.post(`/inventory/${id}/adjust`, { adjustment, reason }),
+  getLowStock: () => api.get('/inventory/low-stock'),
+  delete: (id: string) => api.delete(`/inventory/${id}`),
 };
 
 export const analyticsAPI = {

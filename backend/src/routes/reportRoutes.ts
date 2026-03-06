@@ -3,7 +3,10 @@ import {
   getFinancialReport,
   getSalesReport,
   getWorkerPerformanceReport,
+  getWorkerSalesReport,
   getDashboardStats,
+  downloadFinancialReportPDF,
+  downloadWorkerPerformancePDF,
 } from '../controllers/reportController';
 
 const router = Router();
@@ -23,6 +26,13 @@ router.get('/dashboard', getDashboardStats);
 router.get('/financial', getFinancialReport);
 
 /**
+ * @route   GET /api/reports/financial/pdf
+ * @desc    Download financial report as PDF
+ * @access  Protected
+ */
+router.get('/financial/pdf', downloadFinancialReportPDF);
+
+/**
  * @route   GET /api/reports/sales
  * @desc    Get sales report with top items and clients
  * @access  Protected
@@ -35,5 +45,19 @@ router.get('/sales', getSalesReport);
  * @access  Protected
  */
 router.get('/worker-performance', getWorkerPerformanceReport);
+
+/**
+ * @route   GET /api/reports/worker-performance/pdf
+ * @desc    Download worker performance report as PDF
+ * @access  Protected
+ */
+router.get('/worker-performance/pdf', downloadWorkerPerformancePDF);
+
+/**
+ * @route   GET /api/reports/worker/:workerId/sales
+ * @desc    Get individual worker sales report
+ * @access  Protected
+ */
+router.get('/worker/:workerId/sales', getWorkerSalesReport);
 
 export default router;

@@ -82,7 +82,8 @@ export const createWorker = async (req: Request, res: Response): Promise<void> =
 
   const { name, email, phone, address, role, commissionRate } = req.body;
 
-  if (!name || !email || !phone || !address || !role) {
+  // Email is now optional
+  if (!name || !phone || !address || !role) {
     logger.warn('createWorker', {
       requestId,
       message: 'Missing required fields',
@@ -90,12 +91,13 @@ export const createWorker = async (req: Request, res: Response): Promise<void> =
     });
     res.status(400).json({
       success: false,
-      message: 'name, email, phone, address, and role are required',
+      message: 'name, phone, address, and role are required',
     });
     return;
   }
 
-  if (!isValidEmail(email)) {
+  // Only validate email format if provided
+  if (email && !isValidEmail(email)) {
     res.status(400).json({ success: false, message: 'Invalid email format' });
     return;
   }
@@ -113,10 +115,13 @@ export const createWorker = async (req: Request, res: Response): Promise<void> =
     return;
   }
 
-  const existingWorker = workerRepository.findByEmail(String(email).toLowerCase().trim());
-  if (existingWorker) {
-    res.status(400).json({ success: false, message: 'Email already registered' });
-    return;
+  // Only check email uniqueness if email is provided
+  if (email) {
+    const existingWorker = workerRepository.findByEmail(String(email).toLowerCase().trim());
+    if (existingWorker) {
+      res.status(400).json({ success: false, message: 'Email already registered' });
+      return;
+    }
   }
 
   let commRate = 0;
@@ -133,7 +138,7 @@ export const createWorker = async (req: Request, res: Response): Promise<void> =
 
   const worker = workerRepository.create({
     name: String(name).trim(),
-    email: String(email).toLowerCase().trim(),
+    email: email ? String(email).toLowerCase().trim() : '',
     phone: String(phone).trim(),
     address: String(address).trim(),
     role: String(role),
@@ -193,14 +198,18 @@ export const updateWorker = async (req: Request, res: Response): Promise<void> =
 
   if (req.body.email !== undefined) {
     updateData.email = String(req.body.email).toLowerCase().trim();
-    if (!isValidEmail(updateData.email)) {
+    // Only validate email format if provided and not empty
+    if (updateData.email && !isValidEmail(updateData.email)) {
       res.status(400).json({ success: false, message: 'Invalid email format' });
       return;
     }
-    const existingWorker = workerRepository.findByEmail(updateData.email);
-    if (existingWorker && existingWorker.id !== workerId) {
-      res.status(400).json({ success: false, message: 'Email already registered' });
-      return;
+    // Only check email uniqueness if email is provided and not empty
+    if (updateData.email) {
+      const existingWorker = workerRepository.findByEmail(updateData.email);
+      if (existingWorker && existingWorker.id !== workerId) {
+        res.status(400).json({ success: false, message: 'Email already registered' });
+        return;
+      }
     }
   }
 

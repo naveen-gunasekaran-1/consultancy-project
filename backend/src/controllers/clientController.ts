@@ -48,32 +48,39 @@ export const createClient = async (req: Request, res: Response): Promise<void> =
   const { name, email, phone, address, city, state, zipCode, country, companyName, notes } = req.body;
   logger.info('client.create', { requestId: req.requestId, email });
   
-  if (!name || !email || !phone || !address || !city || !state || !zipCode) {
+  // Email is now optional
+  if (!name || !phone || !address || !city || !state || !zipCode) {
     logger.warn('client.create.validation_failed', { requestId: req.requestId, reason: 'missing_required_fields' });
-    res.status(400).json({ message: 'Missing required fields' });
+    res.status(400).json({ message: 'Missing required fields: name, phone, address, city, state, zipCode' });
     return;
   }
-  if (!isValidEmail(email)) {
+  
+  // Only validate email format if provided
+  if (email && !isValidEmail(email)) {
     logger.warn('client.create.validation_failed', { requestId: req.requestId, reason: 'invalid_email' });
     res.status(400).json({ message: 'Invalid email format' });
     return;
   }
+  
   if (!isValidPhone(phone)) {
     logger.warn('client.create.validation_failed', { requestId: req.requestId, reason: 'invalid_phone' });
     res.status(400).json({ message: 'Invalid phone format' });
     return;
   }
 
-  const existingClient = clientRepository.findByEmail(email.toLowerCase());
-  if (existingClient) {
-    logger.warn('client.create.failed', { requestId: req.requestId, reason: 'email_exists' });
-    res.status(400).json({ message: 'Email already registered' });
-    return;
+  // Only check email uniqueness if email is provided
+  if (email) {
+    const existingClient = clientRepository.findByEmail(email.toLowerCase());
+    if (existingClient) {
+      logger.warn('client.create.failed', { requestId: req.requestId, reason: 'email_exists' });
+      res.status(400).json({ message: 'Email already registered' });
+      return;
+    }
   }
 
   const client = clientRepository.create({
     name,
-    email: email.toLowerCase(),
+    email: email ? email.toLowerCase() : '',
     phone,
     address,
     city,
@@ -105,6 +112,7 @@ export const updateClient = async (req: Request, res: Response): Promise<void> =
     res.status(400).json({ message: 'Invalid phone format' });
     return;
   }
+  // Only validate email format if provided
   if (email && !isValidEmail(email)) {
     logger.warn('client.update.validation_failed', { requestId: req.requestId, reason: 'invalid_email' });
     res.status(400).json({ message: 'Invalid email format' });

@@ -8,6 +8,7 @@ interface InvoiceRef {
   _id: string;
   invoiceNumber: string;
   total?: number;
+  status?: string;
 }
 
 interface Payment {
@@ -207,7 +208,7 @@ const PaymentsScreen: React.FC = () => {
                     disabled={Boolean(editingId)}
                   >
                     <option value="">Select invoice</option>
-                    {invoices.map((invoice) => (
+                    {invoices.filter((invoice) => invoice.status !== 'paid').map((invoice) => (
                       <option key={invoice._id} value={invoice._id}>
                         {invoice.invoiceNumber}
                       </option>

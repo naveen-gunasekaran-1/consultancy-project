@@ -5,6 +5,7 @@ import guideRepository from '../repositories/guideRepository';
 import clientRepository from '../repositories/clientRepository';
 import workerRepository from '../repositories/workerRepository';
 import { logger } from '../utils/logger';
+import { ReportPDFGenerator } from '../utils/reportPDFGenerator';
 
 const inDateRange = (value: string, start: Date, end: Date): boolean => {
   const date = new Date(value);
@@ -338,5 +339,229 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ success: false, message: 'Error fetching dashboard stats' });
+  }
+};
+
+// Get individual worker sales report
+export const getWorkerSalesReport = async (req: Request, res: Response): Promise<void> => {
+  const startTime = Date.now();
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  const { workerId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  try {
+    const workerIdNum = parseInt(workerId, 10);
+    if (!workerIdNum || isNaN(workerIdNum)) {
+      res.status(400).json({ success: false, message: 'Invalid worker ID' });
+      return;
+    }
+
+    const worker = workerRepository.findById(workerIdNum);
+    if (!worker) {
+      res.status(404).json({ success: false, message: 'Worker not found' });
+      return;
+    }
+
+    const { start, end } = getDateRange(startDate as string | undefined, endDate as string | undefined);
+
+    // Get payments associated with this worker
+    const allPayments = paymentRepository.findAll();
+    const workerPayments = allPayments.filter(
+      (p) => p.workerId === workerIdNum && inDateRange(p.paymentDate, start, end)
+    );
+
+    const totalSales = workerPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalCommission = workerPayments.reduce((sum, p) => sum + (p.workerCommissionAmount || 0), 0);
+    const transactionCount = workerPayments.length;
+    const averageTransaction = transactionCount > 0 ? totalSales / transactionCount : 0;
+
+    // Group by payment method
+    const paymentMethodBreakdown: Record<string, { count: number; amount: number }> = {};
+    workerPayments.forEach((p) => {
+      if (!paymentMethodBreakdown[p.paymentMethod]) {
+        paymentMethodBreakdown[p.paymentMethod] = { count: 0, amount: 0 };
+      }
+      paymentMethodBreakdown[p.paymentMethod].count += 1;
+      paymentMethodBreakdown[p.paymentMethod].amount += p.amount;
+    });
+
+    // Recent transactions
+    const recentTransactions = workerPayments
+      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+      .slice(0, 10)
+      .map((p) => ({
+        paymentId: p.id,
+        invoiceId: p.invoiceId,
+        amount: parseFloat(p.amount.toFixed(2)),
+        commission: parseFloat((p.workerCommissionAmount || 0).toFixed(2)),
+        paymentMethod: p.paymentMethod,
+        paymentDate: p.paymentDate,
+      }));
+
+    const duration = Date.now() - startTime;
+    logger.info('getWorkerSalesReport', {
+      requestId,
+      workerId: workerIdNum,
+      totalSales,
+      transactionCount,
+      duration,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        worker: {
+          id: worker.id,
+          name: worker.name,
+          email: worker.email,
+          role: worker.role,
+          commissionRate: worker.commissionRate,
+          performanceScore: worker.performanceScore,
+          totalEarnings: worker.totalEarnings,
+        },
+        period: { startDate: start, endDate: end },
+        summary: {
+          totalSales: parseFloat(totalSales.toFixed(2)),
+          totalCommission: parseFloat(totalCommission.toFixed(2)),
+          transactionCount,
+          averageTransaction: parseFloat(averageTransaction.toFixed(2)),
+        },
+        paymentMethodBreakdown,
+        recentTransactions,
+      },
+    });
+  } catch (error) {
+    logger.error('getWorkerSalesReport', {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ success: false, message: 'Error generating worker sales report' });
+  }
+};
+
+export const downloadFinancialReportPDF = async (req: Request, res: Response): Promise<void> => {
+  const { startDate, endDate } = req.query;
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+
+  try {
+    logger.info('report.download_financial_pdf', { requestId });
+
+    const { start, end } = getDateRange(startDate as string | undefined, endDate as string | undefined);
+
+    const invoices = invoiceRepository.findAll().filter((invoice) => inDateRange(invoice.createdAt, start, end));
+    const payments = paymentRepository.findAll().filter((payment) => inDateRange(payment.paymentDate, start, end));
+
+    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.total, 0);
+    const totalTax = invoices.reduce((sum, inv) => sum + inv.tax, 0);
+    const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
+
+    const invoiceStats = {
+      total: invoices.length,
+      paid: invoices.filter((i) => i.status === 'paid').length,
+      pending: invoices.filter((i) => i.status === 'sent' || i.status === 'draft').length,
+      overdue: invoices.filter((i) => i.status === 'overdue').length,
+    };
+
+    const paymentMethodBreakdown: Record<string, number> = {};
+    payments.forEach((p) => {
+      if (!paymentMethodBreakdown[p.paymentMethod]) {
+        paymentMethodBreakdown[p.paymentMethod] = 0;
+      }
+      paymentMethodBreakdown[p.paymentMethod] += p.amount;
+    });
+
+    const paymentMethods = Object.entries(paymentMethodBreakdown).map(([method, amount]) => ({
+      method,
+      amount,
+      percentage: totalPayments > 0 ? (amount / totalPayments) * 100 : 0,
+    }));
+
+    const pdfStream = ReportPDFGenerator.generate({
+      reportType: 'financial',
+      startDate: start,
+      endDate: end,
+      totalRevenue,
+      totalTax,
+      totalPayments,
+      invoiceStats,
+      paymentMethods,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="financial_report_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.pdf"`
+    );
+
+    logger.info('report.download_financial_pdf.success', { requestId });
+    pdfStream.pipe(res);
+  } catch (error) {
+    logger.error('report.download_financial_pdf.error', {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ success: false, message: 'Error generating financial report PDF' });
+  }
+};
+
+export const downloadWorkerPerformancePDF = async (req: Request, res: Response): Promise<void> => {
+  const { startDate, endDate } = req.query;
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+
+  try {
+    logger.info('report.download_worker_pdf', { requestId });
+
+    const { start, end } = getDateRange(startDate as string | undefined, endDate as string | undefined);
+
+    const workers = workerRepository.findAll();
+    const payments = paymentRepository.findAll().filter((payment) => inDateRange(payment.paymentDate, start, end));
+
+    const workerStats = workers.map((worker) => {
+      const workerPayments = payments.filter((p) => p.workerId === worker.id);
+      const totalSales = workerPayments.reduce((sum, p) => sum + p.amount, 0);
+      const invoiceCount = new Set(workerPayments.map((p) => p.invoiceId)).size;
+
+      return {
+        name: worker.name,
+        totalSales,
+        invoiceCount,
+        performanceScore: worker.performanceScore || 0,
+      };
+    });
+
+    // Sort by performance score and get top performers
+    const topPerformers = workerStats
+      .filter((w) => w.totalSales > 0)
+      .sort((a, b) => b.performanceScore - a.performanceScore)
+      .slice(0, 10);
+
+    const summary = {
+      totalWorkers: workers.length,
+      totalSales: payments.reduce((sum, p) => sum + p.amount, 0),
+      avgPerformance: workers.reduce((sum, w) => sum + (w.performanceScore || 0), 0) / workers.length,
+    };
+
+    const pdfStream = ReportPDFGenerator.generate({
+      reportType: 'worker',
+      startDate: start,
+      endDate: end,
+      topPerformers,
+      summary,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="worker_performance_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.pdf"`
+    );
+
+    logger.info('report.download_worker_pdf.success', { requestId });
+    pdfStream.pipe(res);
+  } catch (error) {
+    logger.error('report.download_worker_pdf.error', {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ success: false, message: 'Error generating worker performance PDF' });
   }
 };

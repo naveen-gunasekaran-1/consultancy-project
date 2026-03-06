@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { clientAPI, guideAPI, invoiceAPI } from '../services/api';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { invoiceAPI, paymentAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import './BaseScreen.css';
 import './GuidesScreen.css';
@@ -8,12 +9,6 @@ interface Client {
   _id: string;
   name: string;
   email: string;
-}
-
-interface Guide {
-  _id: string;
-  name: string;
-  price: number;
 }
 
 interface InvoiceItem {
@@ -38,36 +33,26 @@ interface Invoice {
   notes?: string;
 }
 
-interface DraftItem {
-  id: string;
-  guideId: string;
-  quantity: string;
-  unitPrice: string;
-}
-
 const INVOICE_STATUSES: Array<Invoice['status']> = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
 
-const createDraftItem = (): DraftItem => ({
-  id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-  guideId: '',
-  quantity: '1',
-  unitPrice: '',
-});
+interface Payment {
+  _id: string;
+  invoiceId: string;
+  amount: number;
+  paymentMethod: string;
+  transactionId?: string;
+  paymentDate: string;
+  notes?: string;
+}
 
 const InvoicesScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [error, setError] = useState('');
-  const [selectedClientId, setSelectedClientId] = useState('');
-  const [taxPercentage, setTaxPercentage] = useState('18');
-  const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<DraftItem[]>([createDraftItem()]);
 
   useEffect(() => {
     fetchData();
@@ -77,14 +62,8 @@ const InvoicesScreen: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [invoiceRes, clientRes, guideRes] = await Promise.all([
-        invoiceAPI.getAll(),
-        clientAPI.getAll(),
-        guideAPI.getAll(),
-      ]);
+      const invoiceRes = await invoiceAPI.getAll();
       setInvoices(invoiceRes.data.data || []);
-      setClients(clientRes.data.data || []);
-      setGuides(guideRes.data.data || []);
     } catch (err: unknown) {
       console.error('Failed to fetch invoice data:', err);
       setError('Failed to load invoices. Please refresh.');
@@ -93,121 +72,9 @@ const InvoicesScreen: React.FC = () => {
     }
   };
 
-  const totals = useMemo(() => {
-    const subtotal = items.reduce((sum, item) => {
-      const quantity = Number(item.quantity);
-      const unitPrice = Number(item.unitPrice);
-      if (!item.guideId || !Number.isFinite(quantity) || !Number.isFinite(unitPrice)) {
-        return sum;
-      }
-      if (quantity <= 0 || unitPrice < 0) {
-        return sum;
-      }
-      return sum + quantity * unitPrice;
-    }, 0);
-
-    const taxPct = Number(taxPercentage);
-    const tax = Number.isFinite(taxPct) ? (subtotal * taxPct) / 100 : 0;
-    return {
-      subtotal,
-      tax,
-      total: subtotal + tax,
-    };
-  }, [items, taxPercentage]);
-
-  const resetForm = () => {
-    setSelectedClientId('');
-    setTaxPercentage('18');
-    setNotes('');
-    setItems([createDraftItem()]);
-    setShowForm(false);
-    setError('');
-  };
-
-  const updateItem = (id: string, key: keyof DraftItem, value: string) => {
-    setItems((currentItems) =>
-      currentItems.map((item) => {
-        if (item.id !== id) {
-          return item;
-        }
-
-        if (key === 'guideId') {
-          const selectedGuide = guides.find((guide) => guide._id === value);
-          return {
-            ...item,
-            guideId: value,
-            unitPrice: selectedGuide ? String(selectedGuide.price) : item.unitPrice,
-          };
-        }
-
-        return { ...item, [key]: value };
-      })
-    );
-  };
-
-  const addItemRow = () => {
-    setItems((currentItems) => [...currentItems, createDraftItem()]);
-  };
-
-  const removeItemRow = (id: string) => {
-    setItems((currentItems) => {
-      if (currentItems.length === 1) {
-        return currentItems;
-      }
-      return currentItems.filter((item) => item.id !== id);
-    });
-  };
-
-  const handleCreateInvoice = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!selectedClientId) {
-      setError('Please select a client.');
-      return;
-    }
-
-    const processedItems = items
-      .map((item) => ({
-        guideId: item.guideId,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-      }))
-      .filter((item) => item.guideId && Number.isFinite(item.quantity) && Number.isFinite(item.unitPrice) && item.quantity > 0 && item.unitPrice >= 0);
-
-    if (processedItems.length === 0) {
-      setError('Add at least one valid invoice item.');
-      return;
-    }
-
-    const taxPct = Number(taxPercentage);
-    if (!Number.isFinite(taxPct) || taxPct < 0 || taxPct > 100) {
-      setError('Tax percentage must be between 0 and 100.');
-      return;
-    }
-
-    setSaving(true);
-    setError('');
-    try {
-      await invoiceAPI.create({
-        clientId: selectedClientId,
-        items: processedItems,
-        taxPercentage: taxPct,
-        notes: notes.trim(),
-      });
-      resetForm();
-      fetchData();
-    } catch (err: any) {
-      console.error('Failed to create invoice:', err);
-      setError(err?.response?.data?.message || 'Failed to create invoice');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const getClientName = (clientRef: Client | string): string => {
     if (typeof clientRef === 'string') {
-      const client = clients.find((c) => c._id === clientRef);
-      return client?.name || 'Unknown client';
+      return clientRef;
     }
     return clientRef?.name || 'Unknown client';
   };
@@ -228,8 +95,6 @@ const InvoicesScreen: React.FC = () => {
   const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
     try {
       const response = await invoiceAPI.downloadPDF(invoiceId);
-      
-      // Create blob and download
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -245,14 +110,30 @@ const InvoicesScreen: React.FC = () => {
     }
   };
 
-  const handleViewDetails = (invoice: Invoice) => {
+  const handleViewDetails = async (invoice: Invoice) => {
     setSelectedInvoice(invoice);
+    setSelectedPayment(null);
+    
+    // If invoice is paid, fetch its payment details
+    if (invoice.status === 'paid') {
+      try {
+        const response = await paymentAPI.getByInvoiceId(invoice._id);
+        const payments = response.data.data || [];
+        if (payments.length > 0) {
+          setSelectedPayment(payments[0]); // Show the first/most recent payment
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch payment details:', err);
+      }
+    }
+    
     setShowDetails(true);
   };
 
   const handleCloseDetails = () => {
     setShowDetails(false);
     setSelectedInvoice(null);
+    setSelectedPayment(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -275,99 +156,14 @@ const InvoicesScreen: React.FC = () => {
       <div className="dashboard-content">
         <header className="dashboard-header">
           <h1>Invoices Management</h1>
-          <button className="add-btn" onClick={() => setShowForm(true)}>
+          <button className="add-btn" onClick={() => navigate('/invoices/create')}>
             + Create Invoice
           </button>
         </header>
 
-        {showForm && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <h2>Create Invoice</h2>
-              <form onSubmit={handleCreateInvoice}>
-                <div className="form-group">
-                  <label>Client *</label>
-                  <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>
-                    <option value="">Select client</option>
-                    {clients.map((client) => (
-                      <option key={client._id} value={client._id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {items.map((item, index) => (
-                  <div className="form-group" key={item.id}>
-                    <label>Item {index + 1}</label>
-                    <select value={item.guideId} onChange={(e) => updateItem(item.id, 'guideId', e.target.value)}>
-                      <option value="">Select guide</option>
-                      {guides.map((guide) => (
-                        <option key={guide._id} value={guide._id}>
-                          {guide.name} (Rs {guide.price})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Quantity"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Unit price"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)}
-                    />
-                    <button type="button" className="delete-btn" onClick={() => removeItemRow(item.id)}>
-                      Remove Item
-                    </button>
-                  </div>
-                ))}
-
-                <button type="button" className="edit-btn" onClick={addItemRow}>
-                  + Add Another Item
-                </button>
-
-                <div className="form-group">
-                  <label>Tax Percentage</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={taxPercentage}
-                    onChange={(e) => setTaxPercentage(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Notes</label>
-                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-                </div>
-
-                <div className="form-group">
-                  <label>Subtotal: Rs {totals.subtotal.toFixed(2)}</label>
-                  <label>Tax: Rs {totals.tax.toFixed(2)}</label>
-                  <label>Total: Rs {totals.total.toFixed(2)}</label>
-                </div>
-
-                {error && <span className="field-error">{error}</span>}
-
-                <div className="modal-actions">
-                  <button type="submit" className="save-btn" disabled={saving}>
-                    {saving ? 'Creating...' : 'Create'}
-                  </button>
-                  <button type="button" className="cancel-btn" onClick={resetForm} disabled={saving}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
+        {error && (
+          <div style={{ padding: '12px', backgroundColor: '#fee', color: '#c33', margin: '10px', borderRadius: '4px' }}>
+            {error}
           </div>
         )}
 
@@ -383,12 +179,48 @@ const InvoicesScreen: React.FC = () => {
                   <strong>Client:</strong> {getClientName(selectedInvoice.clientId)}
                 </div>
                 <div style={{ marginBottom: '10px' }}>
-                  <strong>Status:</strong> <span style={{ textTransform: 'capitalize' }}>{selectedInvoice.status}</span>
+                  <strong>Status:</strong> <span style={{ textTransform: 'capitalize', padding: '4px 8px', borderRadius: '4px', backgroundColor: selectedInvoice.status === 'paid' ? '#22C55E' : selectedInvoice.status === 'draft' ? '#GRAY' : selectedInvoice.status === 'overdue' ? '#EF4444' : '#F59E0B', color: 'white' }}>{selectedInvoice.status}</span>
                 </div>
-                {selectedInvoice.dueDate && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <strong>Due Date:</strong> {new Date(selectedInvoice.dueDate).toLocaleDateString()}
-                  </div>
+                {selectedInvoice.status === 'paid' ? (
+                  <>
+                    <div style={{ marginBottom: '10px' }}>
+                      <strong>Payment Status:</strong> Paid
+                    </div>
+                    {selectedPayment && (
+                      <>
+                        <div style={{ marginBottom: '10px' }}>
+                          <strong>Amount Paid:</strong> Rs {selectedPayment.amount.toFixed(2)}
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                          <strong>Payment Method:</strong> {selectedPayment.paymentMethod}
+                        </div>
+                        {selectedPayment.transactionId && (
+                          <div style={{ marginBottom: '10px' }}>
+                            <strong>Transaction ID:</strong> {selectedPayment.transactionId}
+                          </div>
+                        )}
+                        <div style={{ marginBottom: '10px' }}>
+                          <strong>Payment Date:</strong> {new Date(selectedPayment.paymentDate).toLocaleDateString()}
+                        </div>
+                        {selectedPayment.notes && (
+                          <div style={{ marginBottom: '10px' }}>
+                            <strong>Payment Notes:</strong> {selectedPayment.notes}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {selectedInvoice.dueDate && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong>Due Date:</strong> {new Date(selectedInvoice.dueDate).toLocaleDateString()}
+                      </div>
+                    )}
+                    <div style={{ marginBottom: '10px' }}>
+                      <strong>Remaining Balance:</strong> Rs {selectedInvoice.total.toFixed(2)}
+                    </div>
+                  </>
                 )}
                 {selectedInvoice.notes && (
                   <div style={{ marginBottom: '10px' }}>

@@ -215,6 +215,30 @@ const createTables = () => {
     )
   `);
 
+  // Orders table (for driver dispatch and stock tracking)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      driverName TEXT NOT NULL,
+      driverPhone TEXT NOT NULL,
+      vehicleNumber TEXT,
+      guideId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      dispatchDate TEXT DEFAULT CURRENT_TIMESTAMP,
+      amount REAL NOT NULL,
+      amountReceived REAL DEFAULT 0,
+      balanceAmount REAL NOT NULL,
+      paymentStatus TEXT DEFAULT 'pending',
+      paymentMethod TEXT,
+      notes TEXT,
+      isActive INTEGER DEFAULT 1,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (guideId) REFERENCES guides(id)
+    )
+  `);
+
   // Stock movements table (for inventory tracking)
   database.exec(`
     CREATE TABLE IF NOT EXISTS stock_movements (
@@ -229,6 +253,25 @@ const createTables = () => {
     )
   `);
 
+  // Inventory table (for detailed stock management)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS inventory (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guideId INTEGER UNIQUE NOT NULL,
+      warehouseLocation TEXT,
+      stockQuantity INTEGER NOT NULL DEFAULT 0,
+      reorderLevel INTEGER NOT NULL DEFAULT 10,
+      reorderQuantity INTEGER NOT NULL DEFAULT 50,
+      lastRestocked TEXT,
+      status TEXT DEFAULT 'in-stock',
+      notes TEXT,
+      isActive INTEGER DEFAULT 1,
+      createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (guideId) REFERENCES guides(id)
+    )
+  `);
+
   // Create indexes for performance
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(clientId);
@@ -237,6 +280,10 @@ const createTables = () => {
     CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoiceId);
     CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);
     CREATE INDEX IF NOT EXISTS idx_workers_email ON workers(email);
+    CREATE INDEX IF NOT EXISTS idx_orders_guide ON orders(guideId);
+    CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(paymentStatus);
+    CREATE INDEX IF NOT EXISTS idx_inventory_guide ON inventory(guideId);
+    CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory(status);
   `);
 
   runSchemaMigrations(database);
