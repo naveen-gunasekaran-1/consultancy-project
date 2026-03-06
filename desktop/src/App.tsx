@@ -9,6 +9,7 @@ import ClientsScreen from './screens/ClientsScreen';
 import InvoicesScreen from './screens/InvoicesScreen';
 import PaymentsScreen from './screens/PaymentsScreen';
 import WorkersScreen from './screens/WorkersScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import './App.css';
 
 function AppContent() {
@@ -26,6 +27,7 @@ function AppContent() {
           <Route path="/invoices" element={<InvoicesScreen />} />
           <Route path="/payments" element={<PaymentsScreen />} />
           <Route path="/workers" element={<WorkersScreen />} />
+          <Route path="/profile" element={<ProfileScreen />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </>
       ) : (

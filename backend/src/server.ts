@@ -14,6 +14,7 @@ import clientRoutes from './routes/clientRoutes';
 import reportRoutes from './routes/reportRoutes';
 import aiRoutes from './routes/aiRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import systemRoutes from './routes/systemRoutes';
 
 // Import middleware
 import { authMiddleware } from './middleware/authMiddleware';
@@ -53,6 +54,9 @@ app.get('/', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+
+// Public system routes
+app.use('/api/system', systemRoutes);
 
 // Protected routes
 app.use('/api/guides', authMiddleware, guideRoutes);

@@ -35,6 +35,7 @@ interface Invoice {
   total: number;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   dueDate?: string;
+  notes?: string;
 }
 
 interface DraftItem {
@@ -60,6 +61,8 @@ const InvoicesScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
   const [taxPercentage, setTaxPercentage] = useState('18');
@@ -242,6 +245,16 @@ const InvoicesScreen: React.FC = () => {
     }
   };
 
+  const handleViewDetails = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setShowDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetails(false);
+    setSelectedInvoice(null);
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this invoice?')) {
       return;
@@ -358,6 +371,72 @@ const InvoicesScreen: React.FC = () => {
           </div>
         )}
 
+        {showDetails && selectedInvoice && (
+          <div className="modal-overlay">
+            <div className="modal" style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+              <h2>Invoice Details</h2>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>Invoice #:</strong> {selectedInvoice.invoiceNumber}
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>Client:</strong> {getClientName(selectedInvoice.clientId)}
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>Status:</strong> <span style={{ textTransform: 'capitalize' }}>{selectedInvoice.status}</span>
+                </div>
+                {selectedInvoice.dueDate && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Due Date:</strong> {new Date(selectedInvoice.dueDate).toLocaleDateString()}
+                  </div>
+                )}
+                {selectedInvoice.notes && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Notes:</strong> {selectedInvoice.notes}
+                  </div>
+                )}
+              </div>
+
+              <h3>Items</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Guide</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Qty</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Unit Price</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedInvoice.items.map((item, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: '10px' }}>{item.guideName}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>{item.quantity}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>Rs {item.unitPrice.toFixed(2)}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>Rs {item.total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div style={{ marginBottom: '20px', textAlign: 'right' }}>
+                <div style={{ marginBottom: '5px' }}>Subtotal: Rs {selectedInvoice.subtotal.toFixed(2)}</div>
+                <div style={{ marginBottom: '5px' }}>Tax ({selectedInvoice.taxPercentage}%): Rs {selectedInvoice.tax.toFixed(2)}</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Total: Rs {selectedInvoice.total.toFixed(2)}</div>
+              </div>
+
+              <div className="modal-actions">
+                <button className="edit-btn" onClick={() => handleDownloadPDF(selectedInvoice._id, selectedInvoice.invoiceNumber)}>
+                  Download PDF
+                </button>
+                <button className="cancel-btn" onClick={handleCloseDetails}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="content-area">
           {loading ? (
             <p>Loading...</p>
@@ -404,8 +483,8 @@ const InvoicesScreen: React.FC = () => {
                         : 'No date'}
                     </td>
                     <td>
-                      <button className="edit-btn" onClick={() => handleDownloadPDF(invoice._id, invoice.invoiceNumber)}>
-                        Download PDF
+                      <button className="edit-btn" onClick={() => handleViewDetails(invoice)}>
+                        View
                       </button>
                       <button className="delete-btn" onClick={() => handleDelete(invoice._id)}>
                         Delete

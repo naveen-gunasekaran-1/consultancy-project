@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, verifyToken, logout } from '../controllers/authController';
+import { login, verifyToken, logout, getProfile, updateProfile } from '../controllers/authController';
 import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -24,5 +24,19 @@ router.get('/verify', authMiddleware, verifyToken);
  * @access  Protected
  */
 router.post('/logout', authMiddleware, logout);
+
+/**
+ * @route   GET /api/auth/profile
+ * @desc    Get current user profile
+ * @access  Protected
+ */
+router.get('/profile', authMiddleware, getProfile);
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update current user profile
+ * @access  Protected
+ */
+router.put('/profile', authMiddleware, updateProfile);
 
 export default router;

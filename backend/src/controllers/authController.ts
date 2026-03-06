@@ -297,3 +297,120 @@ export const verifyToken = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+export const getProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const user = userRepository.findById(userId);
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    logger.info('auth.profile.get.success', {
+      requestId: req.requestId,
+      userId,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    logger.error('auth.profile.get.error', {
+      requestId: req.requestId,
+      userId: req.user?.id,
+      error,
+    });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { name, password, newPassword } = req.body;
+
+    const user = userRepository.findById(userId);
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // If user wants to change password, verify the current password
+    if (newPassword) {
+      if (!password) {
+        res.status(400).json({ message: 'Current password is required to change password' });
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        logger.warn('auth.profile.update.invalid_password', {
+          requestId: req.requestId,
+          userId,
+        });
+        res.status(401).json({ message: 'Current password is incorrect' });
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        res.status(400).json({ message: 'New password must be at least 6 characters' });
+        return;
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      userRepository.updatePassword(userId, hashedPassword);
+    }
+
+    // Update name if provided
+    if (name) {
+      userRepository.updateName(userId, name);
+    }
+
+    const updatedUser = userRepository.findById(userId);
+
+    logger.info('auth.profile.update.success', {
+      requestId: req.requestId,
+      userId,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: updatedUser!.id,
+        email: updatedUser!.email,
+        name: updatedUser!.name,
+        role: updatedUser!.role,
+      },
+    });
+  } catch (error) {
+    logger.error('auth.profile.update.error', {
+      requestId: req.requestId,
+      userId: req.user?.id,
+      error,
+    });
+    res.status(500).json({ message: 'Server error' });
+  }
+};

@@ -82,6 +82,18 @@ class UserRepository {
     const result = stmt.get() as { count: number };
     return result.count;
   }
+
+  updateName(id: number, name: string): User | undefined {
+    const stmt = this.db.prepare('UPDATE users SET name = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?');
+    stmt.run(name, id);
+    return this.findById(id);
+  }
+
+  updatePassword(id: number, hashedPassword: string): User | undefined {
+    const stmt = this.db.prepare('UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?');
+    stmt.run(hashedPassword, id);
+    return this.findById(id);
+  }
 }
 
 export default new UserRepository();
