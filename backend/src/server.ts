@@ -11,10 +11,13 @@ import invoiceRoutes from './routes/invoiceRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import workerRoutes from './routes/workerRoutes';
 import clientRoutes from './routes/clientRoutes';
+import orderRoutes from './routes/orderRoutes';
 import reportRoutes from './routes/reportRoutes';
 import aiRoutes from './routes/aiRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import systemRoutes from './routes/systemRoutes';
+import inventoryRoutes from './routes/inventoryRoutes';
+import backupRoutes from './routes/backupRoutes';
 
 // Import middleware
 import { authMiddleware } from './middleware/authMiddleware';
@@ -64,9 +67,12 @@ app.use('/api/invoices', authMiddleware, invoiceRoutes);
 app.use('/api/payments', authMiddleware, paymentRoutes);
 app.use('/api/workers', authMiddleware, workerRoutes);
 app.use('/api/clients', authMiddleware, clientRoutes);
+app.use('/api/orders', authMiddleware, orderRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
+app.use('/api/inventory', authMiddleware, inventoryRoutes);
+app.use('/api/backup', authMiddleware, backupRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

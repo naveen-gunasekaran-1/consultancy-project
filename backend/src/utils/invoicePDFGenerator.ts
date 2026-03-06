@@ -106,44 +106,103 @@ export class InvoicePDFGenerator {
 
   private static addItemsTable(doc: PDFDocumentType, data: InvoicePDFData): void {
     const startY = 330;
-    const tableTop = startY;
-    const col1X = 50;
-    const col2X = 280;
-    const col3X = 380;
-    const col4X = 470;
+    let yPosition = startY;
+    const pageHeight = 750;
+    const rowHeight = 25;
+    const margin = 50;
+    const tableWidth = 500;
+    
+    // Column positions and widths
+    const itemX = margin;
+    const itemWidth = 260;
+    const qtyX = itemX + itemWidth;
+    const qtyWidth = 60;
+    const priceX = qtyX + qtyWidth;
+    const priceWidth = 100;
+    const amountX = priceX + priceWidth;
+    const amountWidth = 80;
 
-    // Table Header
-    doc.fontSize(10).font('Helvetica-Bold');
-    doc
-      .rect(50, tableTop, 500, 20)
-      .fillAndStroke('#f0f0f0', '#000000');
-
+    // Draw table header with background
+    const headerY = yPosition;
+    doc.rect(itemX, headerY, tableWidth, rowHeight).fill('#f0f0f0');
     doc.fillColor('#000000');
-    doc.text('Item', col1X + 5, tableTop + 5);
-    doc.text('Qty', col2X + 5, tableTop + 5);
-    doc.text('Unit Price', col3X + 5, tableTop + 5);
-    doc.text('Amount', col4X + 5, tableTop + 5);
+    
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text('Item', itemX + 5, headerY + 7);
+    doc.text('Qty', qtyX + 15, headerY + 7, { width: qtyWidth - 20, align: 'center' });
+    doc.text('Price', priceX + 10, headerY + 7, { width: priceWidth - 15, align: 'right' });
+    doc.text('Amount', amountX + 5, headerY + 7, { width: amountWidth - 10, align: 'right' });
 
-    // Table Rows
-    let yPosition = tableTop + 25;
+    // Draw header borders
+    doc.moveTo(itemX, headerY).lineTo(itemX + tableWidth, headerY).stroke(); // Top
+    doc.moveTo(itemX, headerY + rowHeight).lineTo(itemX + tableWidth, headerY + rowHeight).stroke(); // Bottom
+    doc.moveTo(itemX, headerY).lineTo(itemX, headerY + rowHeight).stroke(); // Left
+    doc.moveTo(qtyX, headerY).lineTo(qtyX, headerY + rowHeight).stroke(); // Column divider
+    doc.moveTo(priceX, headerY).lineTo(priceX, headerY + rowHeight).stroke(); // Column divider
+    doc.moveTo(amountX, headerY).lineTo(amountX, headerY + rowHeight).stroke(); // Column divider
+    doc.moveTo(amountX + amountWidth, headerY).lineTo(amountX + amountWidth, headerY + rowHeight).stroke(); // Right
+
+    yPosition += rowHeight;
+
+    // Draw table rows
     doc.fontSize(9).font('Helvetica');
+    doc.fillColor('#000000');
 
     data.items.forEach((item) => {
-      doc.text(item.guideName, col1X + 5, yPosition, { width: 220, ellipsis: true });
-      doc.text(item.quantity.toString(), col2X + 5, yPosition);
-      doc.text(`₹${item.unitPrice.toFixed(2)}`, col3X + 5, yPosition);
-      doc.text(`₹${item.total.toFixed(2)}`, col4X + 5, yPosition);
+      // Check if we need a page break
+      if (yPosition + rowHeight > pageHeight - 100) {
+        doc.addPage();
+        yPosition = 50;
+      }
 
-      yPosition += 20;
+      // Draw row content
+      const rowY = yPosition;
+      
+      // Item name (with text wrapping)
+      doc.text(item.guideName, itemX + 5, rowY + 7, { 
+        width: itemWidth - 10, 
+        height: rowHeight - 4,
+        ellipsis: true 
+      });
+      
+      // Qty (center aligned)
+      doc.text(item.quantity.toString(), qtyX + 5, rowY + 7, { 
+        width: qtyWidth - 10, 
+        align: 'center' 
+      });
+      
+      // Unit Price (right aligned)
+      doc.text(`₹${item.unitPrice.toFixed(2)}`, priceX + 5, rowY + 7, { 
+        width: priceWidth - 10, 
+        align: 'right' 
+      });
+      
+      // Amount (right aligned)
+      doc.text(`₹${item.total.toFixed(2)}`, amountX + 5, rowY + 7, { 
+        width: amountWidth - 10, 
+        align: 'right' 
+      });
+
+      // Draw row borders
+      doc.moveTo(itemX, rowY).lineTo(itemX + tableWidth, rowY).stroke(); // Top
+      doc.moveTo(itemX, rowY + rowHeight).lineTo(itemX + tableWidth, rowY + rowHeight).stroke(); // Bottom
+      doc.moveTo(itemX, rowY).lineTo(itemX, rowY + rowHeight).stroke(); // Left
+      doc.moveTo(qtyX, rowY).lineTo(qtyX, rowY + rowHeight).stroke(); // Column divider
+      doc.moveTo(priceX, rowY).lineTo(priceX, rowY + rowHeight).stroke(); // Column divider
+      doc.moveTo(amountX, rowY).lineTo(amountX, rowY + rowHeight).stroke(); // Column divider
+      doc.moveTo(amountX + amountWidth, rowY).lineTo(amountX + amountWidth, rowY + rowHeight).stroke(); // Right
+
+      yPosition += rowHeight;
     });
 
-    // Table Border
-    doc.rect(50, tableTop, 500, yPosition - tableTop).stroke();
+    // Store the final Y position for totals section
+    (doc as any)._tableEndY = yPosition;
   }
 
   private static addTotals(doc: PDFDocumentType, data: InvoicePDFData): void {
     const totalsX = 350;
-    const totalsStartY = 530;
+    const tableEndY = (doc as any)._tableEndY || 530;
+    const totalsStartY = tableEndY + 20;
     const lineHeight = 20;
 
     doc.fontSize(10).font('Helvetica');
@@ -154,10 +213,10 @@ export class InvoicePDFGenerator {
     doc.text(`Tax (${data.taxPercentage}%):`, totalsX, totalsStartY + lineHeight);
     doc.text(`₹${data.tax.toFixed(2)}`, totalsX + 150, totalsStartY + lineHeight, { align: 'right' });
 
-    // Total in bold
+    // Total in bold and larger
     doc
       .font('Helvetica-Bold')
-      .fontSize(12)
+      .fontSize(14)
       .text('TOTAL:', totalsX, totalsStartY + lineHeight * 2);
     doc.text(`₹${data.total.toFixed(2)}`, totalsX + 150, totalsStartY + lineHeight * 2, {
       align: 'right',
