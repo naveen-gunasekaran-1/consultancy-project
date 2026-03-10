@@ -5,8 +5,9 @@ Backend API for Billing and Inventory Management System
 ## Tech Stack
 - Node.js + Express.js
 - TypeScript
-- MongoDB + Mongoose
+- SQLite (better-sqlite3)
 - JWT Authentication
+- PDFKit for PDF generation
 
 ## Setup
 
@@ -20,7 +21,7 @@ npm install
 cp .env.example .env
 ```
 
-3. Update `.env` with your MongoDB URI and JWT secret
+3. Update `.env` with your JWT secret and database path (optional)
 
 4. Run development server:
 ```bash

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
+    "bundle": "esbuild src/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/server.bundle.cjs --minify --external:better-sqlite3 --external:bindings --external:file-uri-to-path",
     "start": "node dist/server.js",
     "seed:admin": "ts-node src/scripts/seedAdmin.ts"
   },
@@ -27,6 +28,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.0",
     "@types/pdfkit": "^0.17.5",
+    "esbuild": "^0.25.1",
     "electron-rebuild": "^3.2.9",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",

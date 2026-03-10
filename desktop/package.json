@@ -10,7 +10,8 @@
     "electron-start": "wait-on http://localhost:3000 && electron .",
     "start": "concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && electron .\"",
     "dev": "npm run start",
-    "build": "npm run react-build && electron-builder",
+    "prepare-backend": "npm --prefix ../backend run bundle",
+    "build": "npm run prepare-backend && npm run react-build && electron-builder",
     "eject": "react-scripts eject"
   },
   "dependencies": {
@@ -50,15 +51,20 @@
   "build": {
     "appId": "com.vjn.billing",
     "productName": "VJN Billing System",
+    "compression": "maximum",
+    "asar": true,
     "files": [
       "build/**/*",
-      "public/electron.js"
+      "public/electron.js",
+      "public/preload.js",
+      "!**/*.map",
+      "!src/**/*"
     ],
     "extraMetadata": {
       "main": "build/electron.js"
     },
     "asarUnpack": [
-      "backend/**/*"
+      "**/*.node"
     ],
     "directories": {
       "buildResources": "public"
@@ -66,18 +72,27 @@
     "icon": "public/icon",
     "extraFiles": [
       {
-        "from": "../backend/dist",
-        "to": "backend/dist",
-        "filter": ["**/*"]
-      },
-      {
-        "from": "../backend/node_modules",
-        "to": "backend/node_modules",
-        "filter": ["**/*"]
+        "from": "../backend/dist/server.bundle.cjs",
+        "to": "backend/server.bundle.cjs"
       },
       {
         "from": "../backend/package.json",
         "to": "backend/package.json"
+      },
+      {
+        "from": "../backend/node_modules/better-sqlite3",
+        "to": "backend/node_modules/better-sqlite3",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/node_modules/bindings",
+        "to": "backend/node_modules/bindings",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/node_modules/file-uri-to-path",
+        "to": "backend/node_modules/file-uri-to-path",
+        "filter": ["**/*"]
       }
     ],
     "mac": {

@@ -49,7 +49,9 @@ const setupLogging = () => {
     const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
     const logMessage = `[${timestamp}] [${level}] ${message}\n`;
     try {
-      fs.appendFileSync(logFile, logMessage);
+      fs.appendFile(logFile, logMessage, () => {
+        // Ignore async log write errors
+      });
     } catch (e) {
       // Ignore file write errors
     }
@@ -144,10 +146,16 @@ async function ensureBackendRunning() {
     return;
   }
 
-  const backendServerPath = path.resolve(backendDir, 'dist/server.js');
+  const bundledServerPath = isDev
+    ? path.resolve(backendDir, 'dist/server.bundle.cjs')
+    : path.resolve(backendDir, 'server.bundle.cjs');
+  const fallbackServerPath = path.resolve(backendDir, 'dist/server.js');
+  const backendServerPath = fs.existsSync(bundledServerPath)
+    ? bundledServerPath
+    : fallbackServerPath;
 
   if (!fs.existsSync(backendServerPath)) {
-    console.error('[Desktop] Backend server script not found:', backendServerPath);
+    console.error('[Desktop] Backend server script not found. Checked:', bundledServerPath, 'and', fallbackServerPath);
     return;
   }
 
@@ -274,6 +282,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      devTools: isDev,
     },
   });
 
